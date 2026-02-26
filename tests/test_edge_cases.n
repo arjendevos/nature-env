@@ -1,0 +1,73 @@
+// test_edge_cases.n - Tests edge cases and unusual inputs
+import "lib.n" as *
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_edge_cases ---')
+
+    // Key with dots
+    test_start('key with dots')
+    var r1 = unmarshal('my.dotted.key=value')
+    assert_eq(r1['my.dotted.key'], 'value')
+
+    // Key with underscores
+    test_start('key with underscores')
+    var r2 = unmarshal('MY_UNDER_KEY=value')
+    assert_eq(r2['MY_UNDER_KEY'], 'value')
+
+    // Key with numbers
+    test_start('key with numbers')
+    var r3 = unmarshal('KEY123=value')
+    assert_eq(r3['KEY123'], 'value')
+
+    // Value with equals sign
+    test_start('value with equals sign')
+    var r4 = unmarshal('KEY="a=b=c"')
+    assert_eq(r4['KEY'], 'a=b=c')
+
+    // Multiple equals - first is the delimiter
+    test_start('unquoted value with equals')
+    var r5 = unmarshal('KEY=a=b')
+    assert_eq(r5['KEY'], 'a=b')
+
+    // Spaces around equals
+    test_start('colon as separator')
+    var r6 = unmarshal('KEY:value')
+    assert_eq(r6['KEY'], 'value')
+
+    // Trailing newline
+    test_start('trailing newline')
+    var r7 = unmarshal('KEY=value\n')
+    assert_eq(r7['KEY'], 'value')
+
+    // Only whitespace
+    test_start('only whitespace')
+    var r8 = unmarshal('   \n  \n  ')
+    assert_eq_int(r8.len(), 0)
+
+    // Tab-separated
+    test_start('tab after equals')
+    var r9 = unmarshal('KEY=\tvalue')
+    assert_eq(r9['KEY'], 'value')
+
+    // Multiple files
+    test_start('read multiple files')
+    var r10 = read(['fixtures/basic.env', 'fixtures/export.env'])
+    assert_contains_key(r10, 'SIMPLE_KEY')
+    assert_contains_key(r10, 'EXPORTED_KEY')
+
+    // Later file overrides earlier
+    test_start('later file overrides earlier')
+    var r11 = read(['fixtures/basic.env', 'fixtures/basic.env'])
+    assert_eq(r11['SIMPLE_KEY'], 'simple_value')
+
+    // value with URL
+    test_start('URL value')
+    var r12 = unmarshal('URL=https://example.com:8080/path?q=1&r=2')
+    assert_eq(r12['URL'], 'https://example.com:8080/path?q=1&r=2')
+
+    var ok = test_summary('test_edge_cases')
+    if !ok {
+        throw errorf('test_edge_cases failed')
+    }
+}

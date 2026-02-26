@@ -1,0 +1,62 @@
+// test_load.n - Tests load and overload behavior
+import "lib.n" as *
+import libc
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_load ---')
+
+    // Load sets env vars
+    test_start('load sets environment variables')
+    load(['fixtures/load.env'])
+    var v1 = libc.getenv('LOAD_KEY1'.to_cstr())
+    if v1 as anyptr != 0 as anyptr {
+        assert_eq(v1.to_string(), 'value1')
+    } else {
+        assert_true(false) // should not be null
+    }
+
+    var v2 = libc.getenv('LOAD_KEY2'.to_cstr())
+    if v2 as anyptr != 0 as anyptr {
+        assert_eq(v2.to_string(), 'value2')
+    } else {
+        assert_true(false)
+    }
+
+    // Load does NOT override existing env vars
+    test_start('load does not override existing')
+    libc.setenv('OVERRIDE_KEY'.to_cstr(), 'preset_value'.to_cstr(), 1)
+    load(['fixtures/overload.env'])
+    var v3 = libc.getenv('OVERRIDE_KEY'.to_cstr())
+    if v3 as anyptr != 0 as anyptr {
+        assert_eq(v3.to_string(), 'preset_value') // should keep preset value
+    } else {
+        assert_true(false)
+    }
+
+    // Overload DOES override existing env vars
+    test_start('overload overrides existing')
+    libc.setenv('OVERRIDE_KEY'.to_cstr(), 'preset_value'.to_cstr(), 1)
+    overload(['fixtures/overload.env'])
+    var v4 = libc.getenv('OVERRIDE_KEY'.to_cstr())
+    if v4 as anyptr != 0 as anyptr {
+        assert_eq(v4.to_string(), 'original') // overloaded with file value
+    } else {
+        assert_true(false)
+    }
+
+    // Load default (empty array -> .env)
+    // We won't test this here since we'd need a .env in cwd
+
+    // Read doesn't set env vars
+    test_start('read does not set env vars')
+    var result = read(['fixtures/basic.env'])
+    // SIMPLE_KEY should be in result map but not necessarily in env
+    assert_contains_key(result, 'SIMPLE_KEY')
+    assert_eq(result['SIMPLE_KEY'], 'simple_value')
+
+    var ok = test_summary('test_load')
+    if !ok {
+        throw errorf('test_load failed')
+    }
+}

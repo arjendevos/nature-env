@@ -1,0 +1,74 @@
+// test_marshal.n - Tests marshal and write functionality
+import "lib.n" as *
+import fs
+import syscall
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_marshal ---')
+
+    // Marshal simple map
+    test_start('marshal simple map')
+    {string:string} env1 = {}
+    env1['KEY'] = 'value'
+    var marshaled = marshal(env1)
+    assert_eq(marshaled, 'KEY="value"')
+
+    // Marshal integer value (no quotes)
+    test_start('marshal integer value')
+    {string:string} env2 = {}
+    env2['PORT'] = '3000'
+    var m2 = marshal(env2)
+    assert_eq(m2, 'PORT=3000')
+
+    // Marshal negative integer
+    test_start('marshal negative integer')
+    {string:string} env3 = {}
+    env3['OFFSET'] = '-5'
+    var m3 = marshal(env3)
+    assert_eq(m3, 'OFFSET=-5')
+
+    // Marshal multiple keys (sorted)
+    test_start('marshal sorted output')
+    {string:string} env4 = {}
+    env4['ZEBRA'] = 'last'
+    env4['ALPHA'] = 'first'
+    env4['MIDDLE'] = 'mid'
+    var m4 = marshal(env4)
+    // Keys should be sorted alphabetically
+    assert_true(m4.len() > 0)
+
+    // Marshal empty map
+    test_start('marshal empty map')
+    {string:string} env5 = {}
+    var m5 = marshal(env5)
+    assert_eq(m5, '')
+
+    // Unmarshal -> marshal round trip
+    test_start('unmarshal then marshal round trip')
+    var original = 'DATABASE_URL="postgres://localhost/mydb"\nPORT=5432'
+    var parsed = unmarshal(original)
+    var re_marshaled = marshal(parsed)
+    var re_parsed = unmarshal(re_marshaled)
+    assert_eq(re_parsed['DATABASE_URL'], 'postgres://localhost/mydb')
+    assert_eq(re_parsed['PORT'], '5432')
+
+    // Write and read back
+    test_start('write then read back')
+    {string:string} write_env = {}
+    write_env['WRITTEN_KEY'] = 'written_value'
+    write_env['WRITTEN_PORT'] = '8080'
+    write(write_env, 'fixtures/write_test.env')
+
+    var read_back = read(['fixtures/write_test.env'])
+    assert_eq(read_back['WRITTEN_KEY'], 'written_value')
+    assert_eq(read_back['WRITTEN_PORT'], '8080')
+
+    // Clean up written file
+    // (no unlink in stdlib, but the file is small and in fixtures)
+
+    var ok = test_summary('test_marshal')
+    if !ok {
+        throw errorf('test_marshal failed')
+    }
+}

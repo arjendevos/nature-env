@@ -1,0 +1,63 @@
+// test_expansion.n - Tests variable expansion in values
+import "lib.n" as *
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_expansion ---')
+
+    // ${VAR} expansion from same file
+    test_start('${VAR} expansion')
+    var r1 = unmarshal('BASE=/usr\nFULL=${BASE}/bin')
+    assert_eq(r1['FULL'], '/usr/bin')
+
+    // $VAR expansion (no braces)
+    test_start('$VAR expansion')
+    var r2 = unmarshal('BASE=/usr\nFULL=$BASE/bin')
+    assert_eq(r2['FULL'], '/usr/bin')
+
+    // $(VAR) expansion (parens)
+    test_start('$(VAR) expansion')
+    var r3 = unmarshal('BASE=/usr\nFULL=$(BASE)/lib')
+    assert_eq(r3['FULL'], '/usr/lib')
+
+    // Escaped dollar sign
+    test_start('escaped dollar sign')
+    var r4 = unmarshal('KEY=\\$NOT_EXPANDED')
+    assert_eq(r4['KEY'], '$NOT_EXPANDED')
+
+    // Multiple expansions in one value
+    test_start('multiple expansions')
+    var r5 = unmarshal('A=hello\nB=world\nC=${A}_${B}')
+    assert_eq(r5['C'], 'hello_world')
+
+    // Undefined variable expands to empty
+    test_start('undefined variable expands to empty')
+    var r6 = unmarshal('KEY=${UNDEFINED_VAR_XYZ}after')
+    assert_eq(r6['KEY'], 'after')
+
+    // Empty braces kept as-is (no variable name)
+    test_start('empty braces kept as literal')
+    var r7 = unmarshal('KEY=${}after')
+    assert_eq(r7['KEY'], '${}after')
+
+    // Self-referencing (later var references earlier)
+    test_start('forward reference within file')
+    var r8 = unmarshal('GREETING=hello\nFULL=say_${GREETING}')
+    assert_eq(r8['FULL'], 'say_hello')
+
+    // Read from fixture
+    test_start('read expansion.env fixture')
+    var file_result = read(['fixtures/expansion.env'])
+    assert_eq(file_result['BASE_PATH'], '/usr/local')
+    assert_eq(file_result['FULL_PATH'], '/usr/local/bin')
+    assert_eq(file_result['HOME_DIR'], '/usr/local/home')
+    assert_eq(file_result['PAREN_PATH'], '/usr/local/lib')
+    assert_eq(file_result['COMBINED'], '/usr/local/bin:/usr/local/lib')
+    assert_eq(file_result['ESCAPED_VAR'], '$NOT_EXPANDED')
+    assert_eq(file_result['AFTER_SELF'], 'world_hello')
+
+    var ok = test_summary('test_expansion')
+    if !ok {
+        throw errorf('test_expansion failed')
+    }
+}

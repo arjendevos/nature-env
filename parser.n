@@ -1,0 +1,487 @@
+import strings
+import libc
+
+// Comment character
+const CHAR_COMMENT = 35  // '#'
+// Quote prefixes
+const PREFIX_SINGLE_QUOTE = 39  // single quote '
+const PREFIX_DOUBLE_QUOTE = 34  // double quote "
+// Export prefix
+const EXPORT_PREFIX = 'export'
+
+// parse_bytes parses .env content bytes into a map of key-value pairs.
+// It modifies the provided map in place, adding found variables.
+fn parse_bytes(string src, {string:string} out):void! {
+    // normalize line endings: replace \r\n with \n
+    var normalized = replace_all(src, '\r\n', '\n')
+
+    var cutset = normalized
+    for cutset.len() > 0 {
+        // skip to next statement (skip whitespace and comments)
+        var start_result = get_statement_start(cutset)
+        if !start_result.found {
+            break
+        }
+        cutset = start_result.value
+
+        // locate and parse the key name
+        var key_result = locate_key_name(cutset)
+        if key_result.err.len() > 0 {
+            throw errorf(key_result.err)
+        }
+        var key = key_result.key
+        cutset = key_result.rest
+
+        // extract the variable value
+        var val_result = extract_var_value(cutset, out)
+        if val_result.err.len() > 0 {
+            throw errorf(val_result.err)
+        }
+
+        out[key] = val_result.value
+        cutset = val_result.rest
+    }
+}
+
+// Result type for string search operations
+type find_result_t = struct {
+    bool found
+    string value
+}
+
+// Result type for key name parsing
+type key_result_t = struct {
+    string key
+    string rest
+    string err
+}
+
+// Result type for value extraction
+type val_result_t = struct {
+    string value
+    string rest
+    string err
+}
+
+// get_statement_start skips whitespace and comment lines, returning the start
+// of the next meaningful statement.
+fn get_statement_start(string src):find_result_t {
+    var pos = index_of_non_space_char(src)
+    if pos == -1 {
+        return find_result_t{found: false}
+    }
+
+    var trimmed = src[pos..]
+    if trimmed.len() == 0 {
+        return find_result_t{found: false}
+    }
+
+    if trimmed[0] != CHAR_COMMENT {
+        return find_result_t{found: true, value: trimmed}
+    }
+
+    // skip comment line - find the next newline
+    var nl = find_char_index(trimmed, '\n'[0])
+    if nl == -1 {
+        return find_result_t{found: false}
+    }
+
+    return get_statement_start(trimmed[nl..])
+}
+
+// locate_key_name locates and parses the key name from the beginning of a line.
+// It supports optional "export " prefix and keys matching [A-Za-z0-9_.]
+fn locate_key_name(string src):key_result_t {
+    // trim leading spaces (not newlines)
+    var trimmed = trim_left_spaces(src)
+
+    // handle "export " prefix
+    if trimmed.len() >= EXPORT_PREFIX.len() {
+        if trimmed[..EXPORT_PREFIX.len()] == EXPORT_PREFIX {
+            var after_export = trimmed[EXPORT_PREFIX.len()..]
+            if after_export.len() > 0 && is_space(after_export[0]) {
+                trimmed = trim_left_spaces(after_export)
+            }
+        }
+    }
+
+    if trimmed.len() == 0 {
+        return key_result_t{err: 'zero length string'}
+    }
+
+    // locate key name end - scan for = or :
+    var key_end = -1
+    for int i = 0; i < trimmed.len(); i += 1 {
+        var c = trimmed[i]
+
+        if is_space(c) {
+            continue
+        }
+
+        if c == '='[0] || c == ':'[0] {
+            key_end = i
+            break
+        }
+
+        if c == '_'[0] || c == '.'[0] {
+            continue
+        }
+
+        if is_letter(c) || is_digit(c) {
+            continue
+        }
+
+        return key_result_t{err: 'unexpected character in variable name'}
+    }
+
+    if key_end == -1 {
+        return key_result_t{err: 'missing = or : in variable declaration'}
+    }
+
+    // trim trailing whitespace from key
+    var key = trim_right_spaces(trimmed[..key_end])
+    // trim leading whitespace from value part
+    var rest = trim_left_spaces(trimmed[key_end + 1..])
+
+    return key_result_t{key: key, rest: rest}
+}
+
+// extract_var_value extracts a variable value from the source string.
+// It handles unquoted values, single-quoted values, and double-quoted values.
+// For double-quoted values, escape sequences are processed and variables are expanded.
+fn extract_var_value(string src, {string:string} vars):val_result_t {
+    if src.len() == 0 {
+        return val_result_t{}
+    }
+
+    var first = src[0]
+
+    // Check for quoted value
+    if first == PREFIX_DOUBLE_QUOTE || first == PREFIX_SINGLE_QUOTE {
+        var quote = first
+        // lookup quoted string terminator
+        for int i = 1; i < src.len(); i += 1 {
+            if src[i] != quote {
+                continue
+            }
+
+            // skip escaped quote
+            if i > 0 && src[i - 1] == '\\'[0] {
+                continue
+            }
+
+            // extract value between quotes
+            var value = src[1..i]
+
+            if quote == PREFIX_DOUBLE_QUOTE {
+                // unescape and expand variables for double-quoted strings
+                value = expand_variables(expand_escapes(value), vars)
+            }
+
+            var rest = ''
+            if i + 1 < src.len() {
+                rest = src[i + 1..]
+            }
+            return val_result_t{value: value, rest: rest}
+        }
+
+        // unterminated quoted value
+        var nl = find_char_index(src, '\n'[0])
+        var end_idx = src.len()
+        if nl != -1 {
+            end_idx = nl
+        }
+        return val_result_t{err: 'unterminated quoted value ' + src[..end_idx]}
+    }
+
+    // unquoted value - read until end of line
+    var end_of_line = find_line_end(src)
+    if end_of_line == -1 {
+        // Hit EOF without trailing newline
+        end_of_line = src.len()
+        if end_of_line == 0 {
+            return val_result_t{}
+        }
+    }
+
+    var line = src[..end_of_line]
+
+    if line.len() == 0 {
+        var rest = ''
+        if end_of_line < src.len() {
+            rest = src[end_of_line..]
+        }
+        return val_result_t{rest: rest}
+    }
+
+    // Check for inline comments: find # preceded by whitespace
+    var end_of_var = line.len()
+    for int i = 1; i < line.len(); i += 1 {
+        if line[i] == CHAR_COMMENT && i > 0 && is_space(line[i - 1]) {
+            end_of_var = i
+            break
+        }
+    }
+
+    var trimmed = trim_spaces(line[..end_of_var])
+    var rest = ''
+    if end_of_line < src.len() {
+        rest = src[end_of_line..]
+    }
+    return val_result_t{value: expand_variables(trimmed, vars), rest: rest}
+}
+
+// expand_escapes processes escape sequences in double-quoted strings.
+// Supports \n (newline) and \r (carriage return).
+fn expand_escapes(string str):string {
+    var result = ''
+    var i = 0
+    for i < str.len() {
+        if str[i] == '\\'[0] && i + 1 < str.len() {
+            var next = str[i + 1]
+            if next == 'n'[0] {
+                result += '\n'
+                i += 2
+                continue
+            }
+            if next == 'r'[0] {
+                result += '\r'
+                i += 2
+                continue
+            }
+            if next == '\\'[0] {
+                result += '\\'
+                i += 2
+                continue
+            }
+            if next == '"'[0] {
+                result += '"'
+                i += 2
+                continue
+            }
+            if next == '\''[0] {
+                result += '\''
+                i += 2
+                continue
+            }
+            if next == '$'[0] {
+                result += '\\$'
+                i += 2
+                continue
+            }
+            // unknown escape, keep as-is
+            var c_bytes = [str[i + 1]]
+            result += c_bytes as string
+            i += 2
+            continue
+        }
+        var c_bytes = [str[i]]
+        result += c_bytes as string
+        i += 1
+    }
+    return result
+}
+
+// expand_variables replaces ${VAR}, $VAR, and $(VAR) references in the string
+// with values from the provided map or from the system environment.
+fn expand_variables(string v, {string:string} vars):string {
+    var result = ''
+    var i = 0
+    for i < v.len() {
+        // check for escaped dollar sign
+        if v[i] == '\\'[0] && i + 1 < v.len() && v[i + 1] == '$'[0] {
+            result += '$'
+            i += 2
+            continue
+        }
+
+        if v[i] != '$'[0] {
+            var c_bytes = [v[i]]
+            result += c_bytes as string
+            i += 1
+            continue
+        }
+
+        // found $ - parse variable reference
+        i += 1
+        if i >= v.len() {
+            result += '$'
+            break
+        }
+
+        var var_name = ''
+        var has_braces = false
+        var has_parens = false
+
+        if v[i] == '{'[0] {
+            has_braces = true
+            i += 1
+            // read until closing brace
+            var start = i
+            for i < v.len() && v[i] != '}'[0] {
+                i += 1
+            }
+            if i < v.len() {
+                var_name = v[start..i]
+                i += 1  // skip closing brace
+            }
+        } else if v[i] == '('[0] {
+            has_parens = true
+            i += 1
+            // read until closing paren
+            var start = i
+            for i < v.len() && v[i] != ')'[0] {
+                i += 1
+            }
+            if i < v.len() {
+                var_name = v[start..i]
+                i += 1 // skip closing paren
+            }
+        } else {
+            // bare $VAR - read alphanumeric and underscore
+            var start = i
+            for i < v.len() && is_var_name_char(v[i]) {
+                i += 1
+            }
+            var_name = v[start..i]
+        }
+
+        if var_name.len() == 0 {
+            result += '$'
+            if has_braces {
+                result += '{}'
+            } else if has_parens {
+                result += '()'
+            }
+            continue
+        }
+
+        // lookup variable: first in provided map, then in environment
+        if vars.contains(var_name) {
+            result += vars[var_name]
+        } else {
+            var env_val = libc.getenv(var_name.to_cstr())
+            if env_val as anyptr != 0 as anyptr {
+                result += env_val.to_string()
+            }
+        }
+    }
+    return result
+}
+
+// -- Helper functions --
+
+// is_var_name_char returns true if the char can appear in a variable name (A-Z, a-z, 0-9, _)
+fn is_var_name_char(u8 c):bool {
+    return is_letter(c) || is_digit(c) || c == '_'[0]
+}
+
+// is_space returns true for whitespace chars that are NOT line breaks
+fn is_space(u8 c):bool {
+    return c == ' '[0] || c == '\t'[0] || c == '\r'[0] || c == 11 || c == 12
+}
+
+// is_line_end returns true for newline characters
+fn is_line_end(u8 c):bool {
+    return c == '\n'[0] || c == '\r'[0]
+}
+
+// is_letter returns true if c is A-Z or a-z
+fn is_letter(u8 c):bool {
+    return (c >= 'A'[0] && c <= 'Z'[0]) || (c >= 'a'[0] && c <= 'z'[0])
+}
+
+// is_digit returns true if c is 0-9
+fn is_digit(u8 c):bool {
+    return c >= '0'[0] && c <= '9'[0]
+}
+
+// find_char_index finds the first occurrence of char c in string s, returns -1 if not found
+fn find_char_index(string s, u8 c):int {
+    for int i = 0; i < s.len(); i += 1 {
+        if s[i] == c {
+            return i
+        }
+    }
+    return -1
+}
+
+// find_line_end finds the index of the first line-ending character (\n or \r)
+fn find_line_end(string s):int {
+    for int i = 0; i < s.len(); i += 1 {
+        if s[i] == '\n'[0] || s[i] == '\r'[0] {
+            return i
+        }
+    }
+    return -1
+}
+
+// index_of_non_space_char finds the index of the first non-whitespace character
+fn index_of_non_space_char(string s):int {
+    for int i = 0; i < s.len(); i += 1 {
+        var c = s[i]
+        if c != ' '[0] && c != '\t'[0] && c != '\n'[0] && c != '\r'[0] && c != 11 && c != 12 {
+            return i
+        }
+    }
+    return -1
+}
+
+// trim_left_spaces trims leading space characters (not newlines) from a string
+fn trim_left_spaces(string s):string {
+    var i = 0
+    for i < s.len() && is_space(s[i]) {
+        i += 1
+    }
+    if i == 0 {
+        return s
+    }
+    return s[i..]
+}
+
+// trim_right_spaces trims trailing space characters (including newlines) from a string
+fn trim_right_spaces(string s):string {
+    var i = s.len()
+    for i > 0 && (is_space(s[i - 1]) || s[i - 1] == '\n'[0]) {
+        i -= 1
+    }
+    return s[..i]
+}
+
+// trim_spaces trims whitespace from both ends of a string
+fn trim_spaces(string s):string {
+    return trim_right_spaces(trim_left_spaces(s))
+}
+
+// replace_all replaces all occurrences of old with new_ in s
+fn replace_all(string s, string old, string new_):string {
+    if old.len() == 0 {
+        return s
+    }
+    var result = ''
+    var i = 0
+    for i <= s.len() - old.len() {
+        var is_match = true
+        for int j = 0; j < old.len(); j += 1 {
+            if s[i + j] != old[j] {
+                is_match = false
+                break
+            }
+        }
+        if is_match {
+            result += new_
+            i += old.len()
+        } else {
+            var c_bytes = [s[i]]
+            result += c_bytes as string
+            i += 1
+        }
+    }
+    // append remaining characters
+    for i < s.len() {
+        var c_bytes = [s[i]]
+        result += c_bytes as string
+        i += 1
+    }
+    return result
+}

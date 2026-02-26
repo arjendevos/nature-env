@@ -1,0 +1,74 @@
+// test_quotes.n - Tests single and double quoted values
+import "lib.n" as *
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_quotes ---')
+
+    // Single quoted values preserve literal content
+    test_start('single quoted value')
+    var r1 = unmarshal("KEY='hello world'")
+    assert_eq(r1['KEY'], 'hello world')
+
+    // Double quoted values preserve literal content
+    test_start('double quoted value')
+    var r2 = unmarshal('KEY="hello world"')
+    assert_eq(r2['KEY'], 'hello world')
+
+    // Single quotes preserve spaces
+    test_start('single quoted preserves spaces')
+    var r3 = unmarshal("KEY='  spaces  '")
+    assert_eq(r3['KEY'], '  spaces  ')
+
+    // Double quotes preserve spaces
+    test_start('double quoted preserves spaces')
+    var r4 = unmarshal('KEY="  spaces  "')
+    assert_eq(r4['KEY'], '  spaces  ')
+
+    // Single quotes prevent # from being a comment
+    test_start('single quoted hash is literal')
+    var r5 = unmarshal("KEY='value with # hash'")
+    assert_eq(r5['KEY'], 'value with # hash')
+
+    // Double quotes prevent # from being a comment
+    test_start('double quoted hash is literal')
+    var r6 = unmarshal('KEY="value with # hash"')
+    assert_eq(r6['KEY'], 'value with # hash')
+
+    // Single quotes: no escape processing
+    test_start('single quoted no escape expansion')
+    var r7 = unmarshal("KEY='no\\nexpansion'")
+    assert_eq(r7['KEY'], 'no\\nexpansion')
+
+    // Double quotes: escape processing
+    test_start('double quoted escape expansion')
+    var r8 = unmarshal('KEY="yes\\nexpansion"')
+    assert_eq(r8['KEY'], 'yes\nexpansion')
+
+    // Empty single quoted
+    test_start('empty single quoted')
+    var r9 = unmarshal("KEY=''")
+    assert_eq(r9['KEY'], '')
+
+    // Empty double quoted
+    test_start('empty double quoted')
+    var r10 = unmarshal('KEY=""')
+    assert_eq(r10['KEY'], '')
+
+    // Read from fixture
+    test_start('read quotes.env fixture')
+    var file_result = read(['fixtures/quotes.env'])
+    assert_eq(file_result['SINGLE_QUOTED'], 'single quoted value')
+    assert_eq(file_result['DOUBLE_QUOTED'], 'double quoted value')
+    assert_eq(file_result['SINGLE_WITH_SPACES'], '  spaces preserved  ')
+    assert_eq(file_result['DOUBLE_WITH_SPACES'], '  spaces preserved  ')
+    assert_eq(file_result['SINGLE_WITH_HASH'], 'value with # hash')
+    assert_eq(file_result['DOUBLE_WITH_HASH'], 'value with # hash')
+    assert_eq(file_result['EMPTY_SINGLE'], '')
+    assert_eq(file_result['EMPTY_DOUBLE'], '')
+
+    var ok = test_summary('test_quotes')
+    if !ok {
+        throw errorf('test_quotes failed')
+    }
+}

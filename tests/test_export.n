@@ -1,0 +1,44 @@
+// test_export.n - Tests export prefix handling
+import "lib.n" as *
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_export ---')
+
+    // export prefix is stripped
+    test_start('export prefix stripped')
+    var r1 = unmarshal('export KEY=value')
+    assert_contains_key(r1, 'KEY')
+    assert_eq(r1['KEY'], 'value')
+
+    // export with quoted value
+    test_start('export with double quotes')
+    var r2 = unmarshal('export KEY="quoted"')
+    assert_eq(r2['KEY'], 'quoted')
+
+    // export with single quotes
+    test_start('export with single quotes')
+    var r3 = unmarshal("export KEY='single'")
+    assert_eq(r3['KEY'], 'single')
+
+    // mixed export and non-export
+    test_start('mixed export and non-export')
+    var r4 = unmarshal('export A=1\nB=2\nexport C=3')
+    assert_eq(r4['A'], '1')
+    assert_eq(r4['B'], '2')
+    assert_eq(r4['C'], '3')
+
+    // Read from fixture
+    test_start('read export.env fixture')
+    var file_result = read(['fixtures/export.env'])
+    assert_contains_key(file_result, 'EXPORTED_KEY')
+    assert_eq(file_result['EXPORTED_KEY'], 'exported_value')
+    assert_contains_key(file_result, 'NORMAL_KEY')
+    assert_eq(file_result['NORMAL_KEY'], 'normal_value')
+    assert_eq(file_result['EXPORTED_QUOTED'], 'quoted export')
+
+    var ok = test_summary('test_export')
+    if !ok {
+        throw errorf('test_export failed')
+    }
+}

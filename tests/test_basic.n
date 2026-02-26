@@ -1,0 +1,69 @@
+// test_basic.n - Tests basic key=value parsing
+import "lib.n" as *
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_basic ---')
+
+    // Test simple unmarshal
+    test_start('unmarshal simple key=value')
+    var result = unmarshal('KEY=value')
+    assert_contains_key(result, 'KEY')
+    assert_eq(result['KEY'], 'value')
+
+    // Test multiple lines
+    test_start('unmarshal multiple lines')
+    var result2 = unmarshal('KEY1=value1\nKEY2=value2\nKEY3=value3')
+    assert_contains_key(result2, 'KEY1')
+    assert_contains_key(result2, 'KEY2')
+    assert_contains_key(result2, 'KEY3')
+    assert_eq(result2['KEY1'], 'value1')
+    assert_eq(result2['KEY2'], 'value2')
+    assert_eq(result2['KEY3'], 'value3')
+
+    // Test empty value
+    test_start('unmarshal empty value')
+    var result3 = unmarshal('EMPTY=')
+    assert_contains_key(result3, 'EMPTY')
+    assert_eq(result3['EMPTY'], '')
+
+    // Test with spaces around value
+    test_start('unmarshal spaced value gets trimmed')
+    var result4 = unmarshal('KEY=  hello world  ')
+    assert_eq(result4['KEY'], 'hello world')
+
+    // Test number values
+    test_start('unmarshal number value')
+    var result5 = unmarshal('PORT=3000')
+    assert_eq(result5['PORT'], '3000')
+
+    // Test from fixture file
+    test_start('read basic.env fixture')
+    var file_result = read(['fixtures/basic.env'])
+    assert_contains_key(file_result, 'SIMPLE_KEY')
+    assert_eq(file_result['SIMPLE_KEY'], 'simple_value')
+    assert_contains_key(file_result, 'DATABASE_URL')
+    assert_eq(file_result['DATABASE_URL'], 'postgres://localhost/mydb')
+    assert_contains_key(file_result, 'SECRET_KEY')
+    assert_eq(file_result['SECRET_KEY'], 'mysecretkey123')
+    assert_contains_key(file_result, 'EMPTY_VALUE')
+    assert_eq(file_result['EMPTY_VALUE'], '')
+    assert_contains_key(file_result, 'NUMBER_VALUE')
+    assert_eq(file_result['NUMBER_VALUE'], '42')
+
+    // Test empty string input
+    test_start('unmarshal empty string')
+    var result6 = unmarshal('')
+    assert_eq_int(result6.len(), 0)
+
+    // Test windows line endings
+    test_start('unmarshal CRLF line endings')
+    var result7 = unmarshal('KEY1=val1\r\nKEY2=val2')
+    assert_eq(result7['KEY1'], 'val1')
+    assert_eq(result7['KEY2'], 'val2')
+
+    var ok = test_summary('test_basic')
+    if !ok {
+        throw errorf('test_basic failed')
+    }
+}

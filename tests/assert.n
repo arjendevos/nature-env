@@ -1,0 +1,72 @@
+// assert.n - Simple test assertion helpers
+import fmt
+
+var _test_count = 0
+var _pass_count = 0
+var _fail_count = 0
+var _current_test = ''
+
+fn test_start(string name) {
+    _current_test = name
+    _test_count += 1
+}
+
+fn assert_eq(string actual, string expected) {
+    if actual == expected {
+        _pass_count += 1
+    } else {
+        _fail_count += 1
+        println('  FAIL: ' + _current_test)
+        println('    expected: "' + expected + '"')
+        println('    actual:   "' + actual + '"')
+    }
+}
+
+fn assert_eq_int(int actual, int expected) {
+    if actual == expected {
+        _pass_count += 1
+    } else {
+        _fail_count += 1
+        println('  FAIL: ' + _current_test)
+        println('    expected: ' + fmt.sprintf('%d', expected))
+        println('    actual:   ' + fmt.sprintf('%d', actual))
+    }
+}
+
+fn assert_true(bool value) {
+    if value {
+        _pass_count += 1
+    } else {
+        _fail_count += 1
+        println('  FAIL: ' + _current_test + ' (expected true, got false)')
+    }
+}
+
+fn assert_false(bool value) {
+    if !value {
+        _pass_count += 1
+    } else {
+        _fail_count += 1
+        println('  FAIL: ' + _current_test + ' (expected false, got true)')
+    }
+}
+
+fn assert_contains_key({string:string} m, string key) {
+    if m.contains(key) {
+        _pass_count += 1
+    } else {
+        _fail_count += 1
+        println('  FAIL: ' + _current_test + ' (map missing key "' + key + '")')
+    }
+}
+
+fn test_summary(string suite):bool {
+    println('')
+    if _fail_count == 0 {
+        println('  ' + suite + ': ALL PASSED (' + fmt.sprintf('%d', _pass_count) + ' assertions)')
+        return true
+    } else {
+        println('  ' + suite + ': ' + fmt.sprintf('%d', _fail_count) + ' FAILED, ' + fmt.sprintf('%d', _pass_count) + ' passed')
+        return false
+    }
+}

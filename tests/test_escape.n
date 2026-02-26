@@ -1,0 +1,45 @@
+// test_escape.n - Tests escape sequence handling
+import "lib.n" as *
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_escape ---')
+
+    // Newline escape in double quotes
+    test_start('newline escape in double quotes')
+    var r1 = unmarshal('KEY="line1\\nline2"')
+    assert_eq(r1['KEY'], 'line1\nline2')
+
+    // Backslash escape in double quotes
+    test_start('backslash escape in double quotes')
+    var r2 = unmarshal('KEY="path\\\\to\\\\file"')
+    assert_eq(r2['KEY'], 'path\\to\\file')
+
+    // Quote escape in double quotes
+    test_start('quote escape in double quotes')
+    var r3 = unmarshal('KEY="say \\"hello\\""')
+    assert_eq(r3['KEY'], 'say "hello"')
+
+    // Single quotes - no escape processing
+    test_start('single quotes no escape processing')
+    var r4 = unmarshal("KEY='no\\\\nexpansion'")
+    assert_eq(r4['KEY'], 'no\\\\nexpansion')
+
+    // Carriage return escape
+    test_start('carriage return escape')
+    var r5 = unmarshal('KEY="col1\\rcol2"')
+    assert_eq(r5['KEY'], 'col1\rcol2')
+
+    // Read from fixture
+    test_start('read escape.env fixture')
+    var file_result = read(['fixtures/escape.env'])
+    assert_eq(file_result['DOUBLE_ESCAPED'], 'line1\nline2')
+    assert_eq(file_result['DOUBLE_BACKSLASH'], 'path\\to\\file')
+    assert_eq(file_result['DOUBLE_QUOTE_IN'], 'say "hello"')
+    assert_eq(file_result['SINGLE_NO_ESCAPE'], 'no\\nexpansion\\there')
+
+    var ok = test_summary('test_escape')
+    if !ok {
+        throw errorf('test_escape failed')
+    }
+}
