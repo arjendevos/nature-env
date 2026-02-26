@@ -8,7 +8,6 @@ cd "$(dirname "$0")"
 ln -sf ../main.n lib.n
 ln -sf ../parser.n parser.n
 ln -sf ../env/main.n env_mod.n
-ln -sf ../env/helpers.n helpers.n
 ln -sf ../utils.n utils.n
 
 TESTS=(
@@ -47,7 +46,7 @@ for test in "${TESTS[@]}"; do
 done
 
 # Clean up
-rm -f fixtures/write_test.env lib.n parser.n env_mod.n helpers.n utils.n
+rm -f fixtures/write_test.env lib.n parser.n env_mod.n utils.n
 
 echo ""
 echo "==============================="

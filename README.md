@@ -38,7 +38,7 @@ import nature_env
 import nature_env.env as env
 
 fn main():void! {
-    // Load .env file into process environment
+    // Load .env file into process environment (panics on failure)
     nature_env.load()
 
     // Type-safe getters via env module
@@ -57,21 +57,41 @@ fn main():void! {
 
 ### Loading & Reading (`import nature_env`)
 
-#### `load(...[string] filenames):void!`
+#### `load(...[string] filenames):void`
 
-Reads env file(s) and sets them in the process environment. **Will not** override variables that already exist. Defaults to `.env` when called with no arguments.
+Reads env file(s) and sets them in the process environment. **Will not** override variables that already exist. Defaults to `.env` when called with no arguments. **Panics** on failure.
 
 ```nature
 nature_env.load()                              // loads .env
 nature_env.load('.env', '.env.local')          // loads multiple files
 ```
 
-#### `overload(...[string] filenames):void!`
+#### `try_load(...[string] filenames):void!`
 
-Same as `load`, but **will** override existing environment variables.
+Same as `load`, but returns an error instead of panicking.
+
+```nature
+nature_env.try_load('.env') catch err {
+    println(err.msg())
+}
+```
+
+#### `overload(...[string] filenames):void`
+
+Same as `load`, but **will** override existing environment variables. **Panics** on failure.
 
 ```nature
 nature_env.overload('.env.test')
+```
+
+#### `try_overload(...[string] filenames):void!`
+
+Same as `overload`, but returns an error instead of panicking.
+
+```nature
+nature_env.try_overload('.env.test') catch err {
+    println(err.msg())
+}
 ```
 
 #### `read(...[string] filenames):{string:string}!`
