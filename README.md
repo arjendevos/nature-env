@@ -104,6 +104,15 @@ var host = env.text('HOST')                    // throws if missing
 var host = env.text('HOST', 'localhost')       // returns 'localhost' if missing
 ```
 
+#### `env.str(string key, ...[string] fallback):string!`
+
+Alias for `env.text`. Returns the value as a string.
+
+```nature
+var host = env.str('HOST')                     // throws if missing
+var host = env.str('HOST', 'localhost')        // returns 'localhost' if missing
+```
+
 #### `env.number(string key, ...[int] fallback):int!`
 
 Returns the value parsed as an integer.

@@ -1,0 +1,109 @@
+import fs
+import libc
+import syscall
+import "parser.n" as *
+
+// filenames_or_default returns the provided filenames or [".env"] if empty
+#local
+fn filenames_or_default([string] filenames):[string] {
+    if filenames.len() == 0 {
+        return ['.env']
+    }
+    return filenames
+}
+
+// load_file reads a single .env file and sets env vars.
+// If overload is false, existing env vars are not overwritten.
+#local
+fn load_file(string filename, bool overload_):void! {
+    var env_map = read_file(filename)
+
+    // get current environment variable keys
+    var raw_env = libc.get_envs()
+    {string:bool} current_env = {}
+    for raw_line in raw_env {
+        var eq_idx = find_char_index(raw_line, '='[0])
+        if eq_idx > 0 {
+            current_env[raw_line[..eq_idx]] = true
+        }
+    }
+
+    for key, value in env_map {
+        if !current_env.contains(key) || overload_ {
+            libc.setenv(key.to_cstr(), value.to_cstr(), 1)
+        }
+    }
+}
+
+// read_file reads a single .env file and returns its key-value pairs
+#local
+fn read_file(string filename):{string:string}! {
+    var f = fs.open(filename, syscall.O_RDONLY, 0)
+    var content = f.content()
+    f.close()
+    {string:string} out = {}
+    parse_bytes(content, out)
+    return out
+}
+
+// double_quote_escape escapes special characters for double-quoted .env values
+#local
+fn double_quote_escape(string line):string {
+    var result = line
+    // order matters: backslash first
+    result = replace_all(result, '\\', '\\\\')
+    result = replace_all(result, '\n', '\\n')
+    result = replace_all(result, '\r', '\\r')
+    result = replace_all(result, '"', '\\"')
+    result = replace_all(result, '!', '\\!')
+    result = replace_all(result, '$', '\\$')
+    result = replace_all(result, '`', '\\`')
+    return result
+}
+
+// is_integer checks if a string represents a pure integer (optional leading minus)
+#local
+fn is_integer(string s):bool {
+    if s.len() == 0 {
+        return false
+    }
+    var start = 0
+    if s[0] == '-'[0] || s[0] == '+'[0] {
+        start = 1
+    }
+    if start >= s.len() {
+        return false
+    }
+    for int i = start; i < s.len(); i += 1 {
+        if !is_digit(s[i]) {
+            return false
+        }
+    }
+    return true
+}
+
+// sort_strings sorts a string array in-place using bubble sort
+#local
+fn sort_strings([string] arr) {
+    var n = arr.len()
+    for int i = 0; i < n - 1; i += 1 {
+        for int j = 0; j < n - i - 1; j += 1 {
+            if arr[j] > arr[j + 1] {
+                (arr[j], arr[j + 1]) = (arr[j + 1], arr[j])
+            }
+        }
+    }
+}
+
+// join_strings joins a string array with a separator
+#local
+fn join_strings([string] arr, string sep):string {
+    if arr.len() == 0 {
+        return ''
+    }
+    var result = arr[0]
+    for int i = 1; i < arr.len(); i += 1 {
+        result += sep + arr[i]
+    }
+    return result
+}
