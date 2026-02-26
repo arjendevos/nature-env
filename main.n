@@ -3,6 +3,7 @@ import fmt
 import libc
 import strings
 import syscall
+
 import "parser.n" as *
 import "utils.n" as *
 
@@ -108,4 +109,95 @@ fn marshal({string:string} env_map):string {
     return join_strings(lines, '\n')
 }
 
+// --- Typed getters ---
+
+// text retrieves an env var as a string.
+// Throws if not set and no default is provided.
+//   env.text('HOST')              → throws if missing
+//   env.text('HOST', 'localhost') → returns 'localhost' if missing
+fn text(string key, ...[string] fallback):string! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if fallback.len() > 0 {
+            return fallback[0]
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return val.to_string()
+}
+
+// str is an alias for text.
+fn str(string key, ...[string] fallback):string! {
+    return text(key, ...fallback)
+}
+
+// number retrieves an env var as an int.
+// Throws if not set (and no default) or not a valid integer.
+//   env.number('PORT')        → throws if missing
+//   env.number('PORT', 3000)  → returns 3000 if missing
+fn number(string key, ...[int] fallback):int! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if fallback.len() > 0 {
+            return fallback[0]
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return val.to_string().to_int()
+}
+
+// decimal retrieves an env var as a float.
+// Throws if not set (and no default) or not a valid float.
+//   env.decimal('RATE')       → throws if missing
+//   env.decimal('RATE', 0.5)  → returns 0.5 if missing
+fn decimal(string key, ...[float] fallback):float! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if fallback.len() > 0 {
+            return fallback[0]
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return val.to_string().to_float()
+}
+
+// boolean retrieves an env var as a bool.
+// Accepts: true/false, 1/0, yes/no (case-insensitive).
+// Throws if not set (and no default) or not a valid bool.
+//   env.boolean('DEBUG')         → throws if missing
+//   env.boolean('DEBUG', false)  → returns false if missing
+fn boolean(string key, ...[bool] fallback):bool! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if fallback.len() > 0 {
+            return fallback[0]
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return parse_bool(val.to_string())
+}
+
+// array retrieves an env var as a string array, split by comma with whitespace trimmed.
+// Throws if not set and no defaults are provided.
+// The variadic args serve as the default array:
+//   env.array('TAGS')                 → throws if missing
+//   env.array('TAGS', 'a', 'b', 'c') → returns ['a','b','c'] if missing
+fn array(string key, ...[string] fallback):[string]! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if fallback.len() > 0 {
+            return fallback
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return split_and_trim(val.to_string(), ','[0])
+}
+
+// dict retrieves an env var as a {string:string} map, parsing comma-separated key=value pairs.
+// Example: "host=localhost,port=5432" → {"host": "localhost", "port": "5432"}
+// Throws if not set.
+fn dict(string key):{string:string}! {
+    var raw = get_raw(key)
+    return parse_dict(raw)
+}
 

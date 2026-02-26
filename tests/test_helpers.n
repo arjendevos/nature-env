@@ -1,7 +1,6 @@
 // test_helpers.n - Tests typed environment variable helpers (env module)
 import libc
-import "lib.n" as *
-import "env_mod.n" as env
+import "lib.n" as env
 import "assert.n" as *
 
 fn main():void! {
@@ -143,7 +142,7 @@ fn main():void! {
 
     // -- load with variadic args --
     test_start('load with variadic args')
-    load('fixtures/load.env')
+    env.load('fixtures/load.env')
     var lv = libc.getenv('LOAD_KEY1'.to_cstr())
     if lv as anyptr != 0 as anyptr {
         assert_eq(lv.to_string(), 'value1')
@@ -153,7 +152,7 @@ fn main():void! {
 
     // -- read with variadic args --
     test_start('read with variadic multi-file')
-    var multi = read('fixtures/basic.env', 'fixtures/export.env')
+    var multi = env.read('fixtures/basic.env', 'fixtures/export.env')
     assert_contains_key(multi, 'SIMPLE_KEY')
     assert_contains_key(multi, 'EXPORTED_KEY')
 
