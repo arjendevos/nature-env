@@ -1,5 +1,5 @@
 name = "nature_env"
-version = "0.2.0"
+version = "1.0.0"
 authors = ["Arjen de Vos"]
 description = "A dotenv file parser and loader for nature-lang, inspired by godotenv"
 license = "MIT"

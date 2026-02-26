@@ -8,7 +8,7 @@ Add to your `package.toml`:
 
 ```toml
 [dependencies]
-nature_env = { type = "git", version = "v0.2.0", url = "https://github.com/arjendevos/nature-env" }
+nature_env = { type = "git", version = "v1.0.0", url = "https://github.com/arjendevos/nature-env" }
 ```
 
 Then run:
@@ -26,7 +26,9 @@ DATABASE_URL=postgres://localhost/mydb
 SECRET_KEY=mysecret
 DEBUG=true
 PORT=3000
+RATE=0.75
 ALLOWED_ORIGINS=http://localhost,https://example.com
+DB_OPTS=host=localhost,port=5432
 ```
 
 Load and access your variables:
@@ -40,10 +42,12 @@ fn main():void! {
     nature_env.load()
 
     // Type-safe getters via env module
-    var db = env.text('DATABASE_URL')                // string, throws if missing
-    var port = env.number('PORT', 8080)            // int with default
-    var debug = env.boolean('DEBUG')                  // bool (true/false/1/0/yes/no)
-    var origins = env.array('ALLOWED_ORIGINS')        // ["http://localhost", "https://example.com"]
+    var db = env.text('DATABASE_URL')             // string, throws if missing
+    var port = env.number('PORT', 8080)           // int with default
+    var rate = env.decimal('RATE', 0.5)           // float with default
+    var debug = env.boolean('DEBUG')              // bool (true/false/1/0/yes/no)
+    var origins = env.array('ALLOWED_ORIGINS')    // ["http://localhost", "https://example.com"]
+    var opts = env.dict('DB_OPTS')                // {"host": "localhost", "port": "5432"}
 
     println(db)
 }
