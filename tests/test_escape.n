@@ -32,7 +32,7 @@ fn main():void! {
 
     // Read from fixture
     test_start('read escape.env fixture')
-    var file_result = read(['fixtures/escape.env'])
+    var file_result = read('fixtures/escape.env')
     assert_eq(file_result['DOUBLE_ESCAPED'], 'line1\nline2')
     assert_eq(file_result['DOUBLE_BACKSLASH'], 'path\\to\\file')
     assert_eq(file_result['DOUBLE_QUOTE_IN'], 'say "hello"')

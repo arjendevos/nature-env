@@ -39,7 +39,7 @@ fn main():void! {
 
     // Test from fixture file
     test_start('read basic.env fixture')
-    var file_result = read(['fixtures/basic.env'])
+    var file_result = read('fixtures/basic.env')
     assert_contains_key(file_result, 'SIMPLE_KEY')
     assert_eq(file_result['SIMPLE_KEY'], 'simple_value')
     assert_contains_key(file_result, 'DATABASE_URL')

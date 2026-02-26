@@ -40,7 +40,7 @@ fn main():void! {
 
     // Read from fixture
     test_start('read comments.env fixture')
-    var file_result = read(['fixtures/comments.env'])
+    var file_result = read('fixtures/comments.env')
     assert_eq(file_result['KEY1'], 'value1')
     assert_eq(file_result['KEY2'], 'value2')
     assert_eq(file_result['KEY3'], 'value3')

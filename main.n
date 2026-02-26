@@ -11,10 +11,12 @@
 // Then in your nature code:
 //
 //     import nature_env
+//     import nature_env.env as env
 //
 //     fn main():void! {
-//         nature_env.load([])       // loads .env by default
-//         // env vars are now available via libc.getenv()
+//         nature_env.load()         // loads .env by default
+//         var port = env.int('PORT')
+//         var debug = env.bool('DEBUG')
 //     }
 
 import fs
@@ -39,8 +41,8 @@ fn unmarshal_bytes(string src):{string:string}! {
 
 // read reads all env vars from the specified files and returns them as a map
 // without loading them into the process environment.
-// If filenames is empty, defaults to [".env"].
-fn read([string] filenames):{string:string}! {
+// If no filenames given, defaults to ".env".
+fn read(...[string] filenames):{string:string}! {
     var fnames = filenames_or_default(filenames)
     {string:string} env_map = {}
 
@@ -56,8 +58,8 @@ fn read([string] filenames):{string:string}! {
 
 // load reads env file(s) and loads them into the process environment.
 // It WILL NOT override env variables that already exist.
-// If filenames is empty, defaults to [".env"].
-fn load([string] filenames):void! {
+// If no filenames given, defaults to ".env".
+fn load(...[string] filenames):void! {
     var fnames = filenames_or_default(filenames)
     for fname in fnames {
         load_file(fname, false)
@@ -66,8 +68,8 @@ fn load([string] filenames):void! {
 
 // overload reads env file(s) and loads them into the process environment.
 // It WILL override env variables that already exist.
-// If filenames is empty, defaults to [".env"].
-fn overload([string] filenames):void! {
+// If no filenames given, defaults to ".env".
+fn overload(...[string] filenames):void! {
     var fnames = filenames_or_default(filenames)
     for fname in fnames {
         load_file(fname, true)

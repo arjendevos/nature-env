@@ -8,7 +8,7 @@ Add to your `package.toml`:
 
 ```toml
 [dependencies]
-nature_env = { type = "git", version = "v0.1.0", url = "https://github.com/arjendevos/nature-env" }
+nature_env = { type = "git", version = "v0.2.0", url = "https://github.com/arjendevos/nature-env" }
 ```
 
 Then run:
@@ -26,53 +26,60 @@ DATABASE_URL=postgres://localhost/mydb
 SECRET_KEY=mysecret
 DEBUG=true
 PORT=3000
+ALLOWED_ORIGINS=http://localhost,https://example.com
 ```
 
-Load it in your code:
+Load and access your variables:
 
 ```nature
 import nature_env
-import libc
+import nature_env.env as env
 
 fn main():void! {
     // Load .env file into process environment
-    nature_env.load([])
+    nature_env.load()
 
-    // Access variables via libc.getenv()
-    var db = libc.getenv('DATABASE_URL'.to_cstr())
-    println(db.to_string())
+    // Type-safe getters via env module
+    var db = env.text('DATABASE_URL')                // string, throws if missing
+    var port = env.number('PORT', 8080)            // int with default
+    var debug = env.boolean('DEBUG')                  // bool (true/false/1/0/yes/no)
+    var origins = env.array('ALLOWED_ORIGINS')        // ["http://localhost", "https://example.com"]
+
+    println(db)
 }
 ```
 
 ## API
 
-### `load([string] filenames):void!`
+### Loading & Reading (`import nature_env`)
 
-Reads env file(s) and sets them in the process environment. **Will not** override variables that already exist. Defaults to `[".env"]` when given an empty array.
+#### `load(...[string] filenames):void!`
+
+Reads env file(s) and sets them in the process environment. **Will not** override variables that already exist. Defaults to `.env` when called with no arguments.
 
 ```nature
-nature_env.load([])                          // loads .env
-nature_env.load(['.env', '.env.local'])      // loads multiple files
+nature_env.load()                              // loads .env
+nature_env.load('.env', '.env.local')          // loads multiple files
 ```
 
-### `overload([string] filenames):void!`
+#### `overload(...[string] filenames):void!`
 
 Same as `load`, but **will** override existing environment variables.
 
 ```nature
-nature_env.overload(['.env.test'])
+nature_env.overload('.env.test')
 ```
 
-### `read([string] filenames):{string:string}!`
+#### `read(...[string] filenames):{string:string}!`
 
 Reads env file(s) and returns the key-value pairs as a map **without** setting them in the environment.
 
 ```nature
-var env_map = nature_env.read(['.env'])
+var env_map = nature_env.read('.env')
 println(env_map['DATABASE_URL'])
 ```
 
-### `unmarshal(string src):{string:string}!`
+#### `unmarshal(string src):{string:string}!`
 
 Parses a dotenv-formatted string and returns the key-value pairs as a map.
 
@@ -80,24 +87,85 @@ Parses a dotenv-formatted string and returns the key-value pairs as a map.
 var env_map = nature_env.unmarshal('KEY=value\nOTHER=123')
 ```
 
-### `marshal({string:string} env_map):string`
+### Type-Safe Getters (`import nature_env.env as env`)
 
-Converts a map of key-value pairs into a dotenv-formatted string. Keys are sorted alphabetically. Integer values are unquoted, all others are double-quoted with escaping.
+All getters read directly from the process environment (works after `load()` or with any env var).
+
+#### `env.text(string key, ...[string] default_):string!`
+
+Returns the value as a string. Pass an optional default for when the key is not set.
 
 ```nature
-{string:string} env = {}
-env['PORT'] = '3000'
-env['HOST'] = 'localhost'
-var output = nature_env.marshal(env)
+var host = env.text('HOST')                    // throws if missing
+var host = env.text('HOST', 'localhost')       // returns 'localhost' if missing
+```
+
+#### `env.number(string key, ...[int] default_):int!`
+
+Returns the value parsed as an integer.
+
+```nature
+var port = env.number('PORT')              // throws if missing or not a number
+var port = env.number('PORT', 3000)        // returns 3000 if missing
+```
+
+#### `env.decimal(string key, ...[float] default_):float!`
+
+Returns the value parsed as a float.
+
+```nature
+var rate = env.decimal('RATE')             // throws if missing
+var rate = env.decimal('RATE', 0.5)        // returns 0.5 if missing
+```
+
+#### `env.boolean(string key, ...[bool] default_):bool!`
+
+Returns the value parsed as a boolean. Accepts `true`/`false`, `1`/`0`, `yes`/`no` (case-insensitive).
+
+```nature
+var debug = env.boolean('DEBUG')           // throws if missing
+var debug = env.boolean('DEBUG', false)    // returns false if missing
+```
+
+#### `env.array(string key, ...[string] default_):[string]!`
+
+Returns the value split by commas with whitespace trimmed. The variadic args serve as the default array.
+
+```nature
+// TAGS=api, web, worker  →  ["api", "web", "worker"]
+var tags = env.array('TAGS')                      // throws if missing
+var tags = env.array('TAGS', 'a', 'b', 'c')      // returns ['a','b','c'] if missing
+```
+
+#### `env.dict(string key):{string:string}!`
+
+Parses comma-separated `key=value` pairs into a map.
+
+```nature
+// DB_OPTS=host=localhost,port=5432  →  {"host": "localhost", "port": "5432"}
+var opts = env.dict('DB_OPTS')
+```
+
+### Writing (`import nature_env`)
+
+#### `marshal({string:string} env_map):string`
+
+Converts a map into a dotenv-formatted string. Keys are sorted alphabetically. Integer values are unquoted, all others are double-quoted with escaping.
+
+```nature
+{string:string} m = {}
+m['PORT'] = '3000'
+m['HOST'] = 'localhost'
+var output = nature_env.marshal(m)
 // HOST="localhost"\nPORT=3000
 ```
 
-### `write({string:string} env_map, string filename):void!`
+#### `write({string:string} env_map, string filename):void!`
 
 Marshals the map and writes it to a file.
 
 ```nature
-nature_env.write(env, '.env.output')
+nature_env.write(m, '.env.output')
 ```
 
 ## Supported .env Syntax

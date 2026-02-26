@@ -7,6 +7,7 @@ cd "$(dirname "$0")"
 # Create symlinks to library source files
 ln -sf ../main.n lib.n
 ln -sf ../parser.n parser.n
+ln -sf ../env/main.n env_mod.n
 
 TESTS=(
     test_basic
@@ -18,6 +19,7 @@ TESTS=(
     test_marshal
     test_load
     test_edge_cases
+    test_helpers
 )
 
 PASSED=0
@@ -43,7 +45,7 @@ for test in "${TESTS[@]}"; do
 done
 
 # Clean up
-rm -f fixtures/write_test.env lib.n parser.n
+rm -f fixtures/write_test.env lib.n parser.n env_mod.n
 
 echo ""
 echo "==============================="

@@ -1,0 +1,194 @@
+// env - Type-safe environment variable helpers
+//
+// Usage:
+//     import nature_env
+//     import nature_env.env as env
+//
+//     fn main():void! {
+//         nature_env.load()
+//         var host = env.text('HOST')
+//         var port = env.number('PORT', 8080)
+//         var debug = env.boolean('DEBUG')
+//         var tags = env.array('TAGS')
+//         var opts = env.dict('DB_OPTS')
+//     }
+
+import libc
+import strings
+
+// text retrieves an env var as a string.
+// Throws if not set and no default is provided.
+//   env.text('HOST')              → throws if missing
+//   env.text('HOST', 'localhost') → returns 'localhost' if missing
+fn text(string key, ...[string] default_):string! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if default_.len() > 0 {
+            return default_[0]
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return val.to_string()
+}
+
+// number retrieves an env var as an int.
+// Throws if not set (and no default) or not a valid integer.
+//   env.number('PORT')        → throws if missing
+//   env.number('PORT', 3000)  → returns 3000 if missing
+fn number(string key, ...[int] default_):int! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if default_.len() > 0 {
+            return default_[0]
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return val.to_string().to_int()
+}
+
+// decimal retrieves an env var as a float.
+// Throws if not set (and no default) or not a valid float.
+//   env.decimal('RATE')       → throws if missing
+//   env.decimal('RATE', 0.5)  → returns 0.5 if missing
+fn decimal(string key, ...[float] default_):float! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if default_.len() > 0 {
+            return default_[0]
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return val.to_string().to_float()
+}
+
+// boolean retrieves an env var as a bool.
+// Accepts: true/false, 1/0, yes/no (case-insensitive).
+// Throws if not set (and no default) or not a valid bool.
+//   env.boolean('DEBUG')         → throws if missing
+//   env.boolean('DEBUG', false)  → returns false if missing
+fn boolean(string key, ...[bool] default_):bool! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if default_.len() > 0 {
+            return default_[0]
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return parse_bool(val.to_string())
+}
+
+// array retrieves an env var as a string array, split by comma with whitespace trimmed.
+// Throws if not set and no defaults are provided.
+// The variadic args serve as the default array:
+//   env.array('TAGS')                 → throws if missing
+//   env.array('TAGS', 'a', 'b', 'c') → returns ['a','b','c'] if missing
+fn array(string key, ...[string] default_):[string]! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if default_.len() > 0 {
+            return default_
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return split_and_trim(val.to_string(), ','[0])
+}
+
+// dict retrieves an env var as a {string:string} map, parsing comma-separated key=value pairs.
+// Example: "host=localhost,port=5432" → {"host": "localhost", "port": "5432"}
+// Throws if not set.
+fn dict(string key):{string:string}! {
+    var raw = get_raw(key)
+    return parse_dict(raw)
+}
+
+// -- Internal helpers --
+
+fn get_raw(string key):string! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return val.to_string()
+}
+
+fn parse_bool(string s):bool! {
+    var lower = to_lower(s)
+    if lower == 'true' || lower == '1' || lower == 'yes' {
+        return true
+    }
+    if lower == 'false' || lower == '0' || lower == 'no' {
+        return false
+    }
+    throw errorf('cannot parse "%s" as bool (expected true/false/1/0/yes/no)', s)
+}
+
+fn parse_dict(string s):{string:string}! {
+    {string:string} result = {}
+    var pairs = split_and_trim(s, ','[0])
+    for int i = 0; i < pairs.len(); i += 1 {
+        var pair = pairs[i]
+        if pair.len() == 0 {
+            continue
+        }
+        // Find first '='
+        var eq_pos = -1
+        for int j = 0; j < pair.len(); j += 1 {
+            if pair[j] == '='[0] {
+                eq_pos = j
+                break
+            }
+        }
+        if eq_pos < 0 {
+            throw errorf('invalid key=value pair: "%s"', pair)
+        }
+        var k = trim_spaces(pair[0..eq_pos])
+        var v = trim_spaces(pair[eq_pos + 1..])
+        result[k] = v
+    }
+    return result
+}
+
+fn to_lower(string s):string {
+    [u8] result = []
+    for int i = 0; i < s.len(); i += 1 {
+        var c = s[i]
+        if c >= 65 && c <= 90 {
+            result.push(c + 32)
+        } else {
+            result.push(c)
+        }
+    }
+    return result as string
+}
+
+fn split_and_trim(string s, u8 delim):[string] {
+    [string] parts = []
+    var start = 0
+    for int i = 0; i < s.len(); i += 1 {
+        if s[i] == delim {
+            parts.push(trim_spaces(s[start..i]))
+            start = i + 1
+        }
+    }
+    parts.push(trim_spaces(s[start..]))
+    return parts
+}
+
+fn is_space(u8 c):bool {
+    return c == ' '[0] || c == '\t'[0] || c == '\r'[0] || c == 11 || c == 12
+}
+
+fn trim_spaces(string s):string {
+    var left = 0
+    for left < s.len() && is_space(s[left]) {
+        left += 1
+    }
+    var right = s.len()
+    for right > left && (is_space(s[right - 1]) || s[right - 1] == '\n'[0]) {
+        right -= 1
+    }
+    if left == 0 && right == s.len() {
+        return s
+    }
+    return s[left..right]
+}

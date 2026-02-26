@@ -57,7 +57,7 @@ fn main():void! {
 
     // Read from fixture
     test_start('read quotes.env fixture')
-    var file_result = read(['fixtures/quotes.env'])
+    var file_result = read('fixtures/quotes.env')
     assert_eq(file_result['SINGLE_QUOTED'], 'single quoted value')
     assert_eq(file_result['DOUBLE_QUOTED'], 'double quoted value')
     assert_eq(file_result['SINGLE_WITH_SPACES'], '  spaces preserved  ')

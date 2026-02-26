@@ -60,7 +60,7 @@ fn main():void! {
     write_env['WRITTEN_PORT'] = '8080'
     write(write_env, 'fixtures/write_test.env')
 
-    var read_back = read(['fixtures/write_test.env'])
+    var read_back = read('fixtures/write_test.env')
     assert_eq(read_back['WRITTEN_KEY'], 'written_value')
     assert_eq(read_back['WRITTEN_PORT'], '8080')
 

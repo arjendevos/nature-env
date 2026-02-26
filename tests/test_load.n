@@ -8,7 +8,7 @@ fn main():void! {
 
     // Load sets env vars
     test_start('load sets environment variables')
-    load(['fixtures/load.env'])
+    load('fixtures/load.env')
     var v1 = libc.getenv('LOAD_KEY1'.to_cstr())
     if v1 as anyptr != 0 as anyptr {
         assert_eq(v1.to_string(), 'value1')
@@ -26,7 +26,7 @@ fn main():void! {
     // Load does NOT override existing env vars
     test_start('load does not override existing')
     libc.setenv('OVERRIDE_KEY'.to_cstr(), 'preset_value'.to_cstr(), 1)
-    load(['fixtures/overload.env'])
+    load('fixtures/overload.env')
     var v3 = libc.getenv('OVERRIDE_KEY'.to_cstr())
     if v3 as anyptr != 0 as anyptr {
         assert_eq(v3.to_string(), 'preset_value') // should keep preset value
@@ -37,7 +37,7 @@ fn main():void! {
     // Overload DOES override existing env vars
     test_start('overload overrides existing')
     libc.setenv('OVERRIDE_KEY'.to_cstr(), 'preset_value'.to_cstr(), 1)
-    overload(['fixtures/overload.env'])
+    overload('fixtures/overload.env')
     var v4 = libc.getenv('OVERRIDE_KEY'.to_cstr())
     if v4 as anyptr != 0 as anyptr {
         assert_eq(v4.to_string(), 'original') // overloaded with file value
@@ -50,7 +50,7 @@ fn main():void! {
 
     // Read doesn't set env vars
     test_start('read does not set env vars')
-    var result = read(['fixtures/basic.env'])
+    var result = read('fixtures/basic.env')
     // SIMPLE_KEY should be in result map but not necessarily in env
     assert_contains_key(result, 'SIMPLE_KEY')
     assert_eq(result['SIMPLE_KEY'], 'simple_value')

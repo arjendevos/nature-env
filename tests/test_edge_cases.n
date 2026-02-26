@@ -52,13 +52,13 @@ fn main():void! {
 
     // Multiple files
     test_start('read multiple files')
-    var r10 = read(['fixtures/basic.env', 'fixtures/export.env'])
+    var r10 = read('fixtures/basic.env', 'fixtures/export.env')
     assert_contains_key(r10, 'SIMPLE_KEY')
     assert_contains_key(r10, 'EXPORTED_KEY')
 
     // Later file overrides earlier
     test_start('later file overrides earlier')
-    var r11 = read(['fixtures/basic.env', 'fixtures/basic.env'])
+    var r11 = read('fixtures/basic.env', 'fixtures/basic.env')
     assert_eq(r11['SIMPLE_KEY'], 'simple_value')
 
     // value with URL

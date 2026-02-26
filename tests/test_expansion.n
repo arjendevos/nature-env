@@ -47,7 +47,7 @@ fn main():void! {
 
     // Read from fixture
     test_start('read expansion.env fixture')
-    var file_result = read(['fixtures/expansion.env'])
+    var file_result = read('fixtures/expansion.env')
     assert_eq(file_result['BASE_PATH'], '/usr/local')
     assert_eq(file_result['FULL_PATH'], '/usr/local/bin')
     assert_eq(file_result['HOME_DIR'], '/usr/local/home')

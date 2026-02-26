@@ -30,7 +30,7 @@ fn main():void! {
 
     // Read from fixture
     test_start('read export.env fixture')
-    var file_result = read(['fixtures/export.env'])
+    var file_result = read('fixtures/export.env')
     assert_contains_key(file_result, 'EXPORTED_KEY')
     assert_eq(file_result['EXPORTED_KEY'], 'exported_value')
     assert_contains_key(file_result, 'NORMAL_KEY')

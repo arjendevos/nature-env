@@ -1,0 +1,164 @@
+// test_helpers.n - Tests typed environment variable helpers (env module)
+import libc
+import "lib.n" as *
+import "env_mod.n" as env
+import "assert.n" as *
+
+fn main():void! {
+    println('--- test_helpers ---')
+
+    // Setup: set env vars for testing
+    libc.setenv('TEST_STRING'.to_cstr(), 'hello world'.to_cstr(), 1)
+    libc.setenv('TEST_INT'.to_cstr(), '42'.to_cstr(), 1)
+    libc.setenv('TEST_NEG_INT'.to_cstr(), '-10'.to_cstr(), 1)
+    libc.setenv('TEST_FLOAT'.to_cstr(), '3.14'.to_cstr(), 1)
+    libc.setenv('TEST_BOOL_TRUE'.to_cstr(), 'true'.to_cstr(), 1)
+    libc.setenv('TEST_BOOL_FALSE'.to_cstr(), 'false'.to_cstr(), 1)
+    libc.setenv('TEST_BOOL_YES'.to_cstr(), 'yes'.to_cstr(), 1)
+    libc.setenv('TEST_BOOL_NO'.to_cstr(), 'no'.to_cstr(), 1)
+    libc.setenv('TEST_BOOL_ONE'.to_cstr(), '1'.to_cstr(), 1)
+    libc.setenv('TEST_BOOL_ZERO'.to_cstr(), '0'.to_cstr(), 1)
+    libc.setenv('TEST_BOOL_UPPER'.to_cstr(), 'TRUE'.to_cstr(), 1)
+    libc.setenv('TEST_ARRAY'.to_cstr(), 'a,b,c'.to_cstr(), 1)
+    libc.setenv('TEST_ARRAY_SPACES'.to_cstr(), ' a , b , c '.to_cstr(), 1)
+    libc.setenv('TEST_ARRAY_SINGLE'.to_cstr(), 'only'.to_cstr(), 1)
+    libc.setenv('TEST_DICT'.to_cstr(), 'host=localhost,port=5432,db=mydb'.to_cstr(), 1)
+    libc.setenv('TEST_DICT_SPACES'.to_cstr(), ' host = localhost , port = 5432 '.to_cstr(), 1)
+    libc.setenv('TEST_EMPTY'.to_cstr(), ''.to_cstr(), 1)
+
+    // -- env.text --
+    test_start('env.text existing var')
+    var s = env.text('TEST_STRING')
+    assert_eq(s, 'hello world')
+
+    // -- env.text with default --
+    test_start('env.text existing var with default')
+    var s2 = env.text('TEST_STRING', 'default')
+    assert_eq(s2, 'hello world')
+
+    test_start('env.text missing var returns default')
+    var s3 = env.text('NONEXISTENT_VAR_XYZ', 'fallback')
+    assert_eq(s3, 'fallback')
+
+    // -- env.number --
+    test_start('env.number positive')
+    var i1 = env.number('TEST_INT')
+    assert_eq_int(i1, 42)
+
+    test_start('env.number negative')
+    var i2 = env.number('TEST_NEG_INT')
+    assert_eq_int(i2, -10)
+
+    // -- env.number with default --
+    test_start('env.number existing with default')
+    var i3 = env.number('TEST_INT', 0)
+    assert_eq_int(i3, 42)
+
+    test_start('env.number missing returns default')
+    var i4 = env.number('NONEXISTENT_VAR_XYZ', 8080)
+    assert_eq_int(i4, 8080)
+
+    // -- env.decimal --
+    test_start('env.decimal')
+    var f1 = env.decimal('TEST_FLOAT')
+    assert_true(f1 > 3.13 && f1 < 3.15)
+
+    // -- env.decimal with default --
+    test_start('env.decimal missing returns default')
+    var f2 = env.decimal('NONEXISTENT_VAR_XYZ', 1.5)
+    assert_true(f2 > 1.49 && f2 < 1.51)
+
+    // -- env.boolean --
+    test_start('env.boolean true')
+    var b1 = env.boolean('TEST_BOOL_TRUE')
+    assert_true(b1)
+
+    test_start('env.boolean false')
+    var b2 = env.boolean('TEST_BOOL_FALSE')
+    assert_false(b2)
+
+    test_start('env.boolean yes')
+    var b3 = env.boolean('TEST_BOOL_YES')
+    assert_true(b3)
+
+    test_start('env.boolean no')
+    var b4 = env.boolean('TEST_BOOL_NO')
+    assert_false(b4)
+
+    test_start('env.boolean 1')
+    var b5 = env.boolean('TEST_BOOL_ONE')
+    assert_true(b5)
+
+    test_start('env.boolean 0')
+    var b6 = env.boolean('TEST_BOOL_ZERO')
+    assert_false(b6)
+
+    test_start('env.boolean case insensitive')
+    var b7 = env.boolean('TEST_BOOL_UPPER')
+    assert_true(b7)
+
+    // -- env.boolean with default --
+    test_start('env.boolean missing returns default')
+    var b8 = env.boolean('NONEXISTENT_VAR_XYZ', true)
+    assert_true(b8)
+
+    // -- env.array --
+    test_start('env.array comma separated')
+    var arr1 = env.array('TEST_ARRAY')
+    assert_eq_int(arr1.len(), 3)
+    assert_eq(arr1[0], 'a')
+    assert_eq(arr1[1], 'b')
+    assert_eq(arr1[2], 'c')
+
+    test_start('env.array trims whitespace')
+    var arr2 = env.array('TEST_ARRAY_SPACES')
+    assert_eq_int(arr2.len(), 3)
+    assert_eq(arr2[0], 'a')
+    assert_eq(arr2[1], 'b')
+    assert_eq(arr2[2], 'c')
+
+    test_start('env.array single element')
+    var arr3 = env.array('TEST_ARRAY_SINGLE')
+    assert_eq_int(arr3.len(), 1)
+    assert_eq(arr3[0], 'only')
+
+    // -- env.array with default --
+    test_start('env.array missing returns default')
+    var arr4 = env.array('NONEXISTENT_VAR_XYZ', 'x', 'y')
+    assert_eq_int(arr4.len(), 2)
+    assert_eq(arr4[0], 'x')
+    assert_eq(arr4[1], 'y')
+
+    // -- env.dict --
+    test_start('env.dict parses key=value pairs')
+    var d1 = env.dict('TEST_DICT')
+    assert_eq(d1['host'], 'localhost')
+    assert_eq(d1['port'], '5432')
+    assert_eq(d1['db'], 'mydb')
+
+    test_start('env.dict trims whitespace')
+    var d2 = env.dict('TEST_DICT_SPACES')
+    assert_eq(d2['host'], 'localhost')
+    assert_eq(d2['port'], '5432')
+
+    // -- load with variadic args --
+    test_start('load with variadic args')
+    load('fixtures/load.env')
+    var lv = libc.getenv('LOAD_KEY1'.to_cstr())
+    if lv as anyptr != 0 as anyptr {
+        assert_eq(lv.to_string(), 'value1')
+    } else {
+        assert_true(false)
+    }
+
+    // -- read with variadic args --
+    test_start('read with variadic multi-file')
+    var multi = read('fixtures/basic.env', 'fixtures/export.env')
+    assert_contains_key(multi, 'SIMPLE_KEY')
+    assert_contains_key(multi, 'EXPORTED_KEY')
+
+    var ok = test_summary('test_helpers')
+    if !ok {
+        throw errorf('test_helpers failed')
+    }
+}
