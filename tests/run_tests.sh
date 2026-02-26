@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 # Create symlinks to library source files
 ln -sf ../main.n lib.n
 ln -sf ../parser.n parser.n
-ln -sf ../env/main.n env_mod.n
+ln -sf ../env.n env_mod.n
 ln -sf ../utils.n utils.n
 
 TESTS=(

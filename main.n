@@ -41,13 +41,14 @@ fn read(...[string] filenames):{string:string}! {
 // It WILL NOT override env variables that already exist.
 // If no filenames given, defaults to ".env".
 // Panics on failure. Use try_load for error handling.
-fn load(...[string] filenames):void {
+fn load(...[string] filenames):bool {
     var fnames = filenames_or_default(filenames)
     for fname in fnames {
         load_file(fname, false) catch err {
             panic(fmt.sprintf('failed to load env file "%s": %s', fname, err.msg()))
         }
     }
+    return true
 }
 
 // try_load is like load but returns an error instead of panicking.
@@ -62,13 +63,14 @@ fn try_load(...[string] filenames):void! {
 // It WILL override env variables that already exist.
 // If no filenames given, defaults to ".env".
 // Panics on failure. Use try_overload for error handling.
-fn overload(...[string] filenames):void {
+fn overload(...[string] filenames):bool {
     var fnames = filenames_or_default(filenames)
     for fname in fnames {
         load_file(fname, true) catch err {
             panic(fmt.sprintf('failed to load env file "%s": %s', fname, err.msg()))
         }
     }
+    return true
 }
 
 // try_overload is like overload but returns an error instead of panicking.

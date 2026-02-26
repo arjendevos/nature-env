@@ -53,6 +53,17 @@ fn main():void! {
 }
 ```
 
+Or use autoload to skip the explicit `load()` call:
+
+```nature
+import nature_env.autoload                        // .env is loaded automatically
+import nature_env.env as env
+
+fn main():void {
+    var port = env.number('PORT', 8080)
+}
+```
+
 ## API
 
 ### Loading & Reading (`import nature_env`)

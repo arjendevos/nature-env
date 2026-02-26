@@ -11,6 +11,7 @@ const EXPORT_PREFIX = 'export'
 
 // parse_bytes parses .env content bytes into a map of key-value pairs.
 // It modifies the provided map in place, adding found variables.
+#local
 fn parse_bytes(string src, {string:string} out):void! {
     // normalize line endings: replace \r\n with \n
     var normalized = replace_all(src, '\r\n', '\n')
@@ -44,12 +45,14 @@ fn parse_bytes(string src, {string:string} out):void! {
 }
 
 // Result type for string search operations
+#local
 type find_result_t = struct {
     bool found
     string value
 }
 
 // Result type for key name parsing
+#local
 type key_result_t = struct {
     string key
     string rest
@@ -57,6 +60,7 @@ type key_result_t = struct {
 }
 
 // Result type for value extraction
+#local
 type val_result_t = struct {
     string value
     string rest
@@ -65,6 +69,7 @@ type val_result_t = struct {
 
 // get_statement_start skips whitespace and comment lines, returning the start
 // of the next meaningful statement.
+#local
 fn get_statement_start(string src):find_result_t {
     var pos = index_of_non_space_char(src)
     if pos == -1 {
@@ -91,6 +96,7 @@ fn get_statement_start(string src):find_result_t {
 
 // locate_key_name locates and parses the key name from the beginning of a line.
 // It supports optional "export " prefix and keys matching [A-Za-z0-9_.]
+#local
 fn locate_key_name(string src):key_result_t {
     // trim leading spaces (not newlines)
     var trimmed = trim_left_spaces(src)
@@ -149,6 +155,7 @@ fn locate_key_name(string src):key_result_t {
 // extract_var_value extracts a variable value from the source string.
 // It handles unquoted values, single-quoted values, and double-quoted values.
 // For double-quoted values, escape sequences are processed and variables are expanded.
+#local
 fn extract_var_value(string src, {string:string} vars):val_result_t {
     if src.len() == 0 {
         return val_result_t{}
@@ -233,6 +240,7 @@ fn extract_var_value(string src, {string:string} vars):val_result_t {
 
 // expand_escapes processes escape sequences in double-quoted strings.
 // Supports \n (newline) and \r (carriage return).
+#local
 fn expand_escapes(string str):string {
     var result = ''
     var i = 0
@@ -284,6 +292,7 @@ fn expand_escapes(string str):string {
 
 // expand_variables replaces ${VAR}, $VAR, and $(VAR) references in the string
 // with values from the provided map or from the system environment.
+#local
 fn expand_variables(string v, {string:string} vars):string {
     var result = ''
     var i = 0
@@ -372,31 +381,37 @@ fn expand_variables(string v, {string:string} vars):string {
 // -- Helper functions --
 
 // is_var_name_char returns true if the char can appear in a variable name (A-Z, a-z, 0-9, _)
+#local
 fn is_var_name_char(u8 c):bool {
     return is_letter(c) || is_digit(c) || c == '_'[0]
 }
 
 // is_space returns true for whitespace chars that are NOT line breaks
+#local
 fn is_space(u8 c):bool {
     return c == ' '[0] || c == '\t'[0] || c == '\r'[0] || c == 11 || c == 12
 }
 
 // is_line_end returns true for newline characters
+#local
 fn is_line_end(u8 c):bool {
     return c == '\n'[0] || c == '\r'[0]
 }
 
 // is_letter returns true if c is A-Z or a-z
+#local
 fn is_letter(u8 c):bool {
     return (c >= 'A'[0] && c <= 'Z'[0]) || (c >= 'a'[0] && c <= 'z'[0])
 }
 
 // is_digit returns true if c is 0-9
+#local
 fn is_digit(u8 c):bool {
     return c >= '0'[0] && c <= '9'[0]
 }
 
 // find_char_index finds the first occurrence of char c in string s, returns -1 if not found
+#local
 fn find_char_index(string s, u8 c):int {
     for int i = 0; i < s.len(); i += 1 {
         if s[i] == c {
@@ -407,6 +422,7 @@ fn find_char_index(string s, u8 c):int {
 }
 
 // find_line_end finds the index of the first line-ending character (\n or \r)
+#local
 fn find_line_end(string s):int {
     for int i = 0; i < s.len(); i += 1 {
         if s[i] == '\n'[0] || s[i] == '\r'[0] {
@@ -417,6 +433,7 @@ fn find_line_end(string s):int {
 }
 
 // index_of_non_space_char finds the index of the first non-whitespace character
+#local
 fn index_of_non_space_char(string s):int {
     for int i = 0; i < s.len(); i += 1 {
         var c = s[i]
@@ -428,6 +445,7 @@ fn index_of_non_space_char(string s):int {
 }
 
 // trim_left_spaces trims leading space characters (not newlines) from a string
+#local
 fn trim_left_spaces(string s):string {
     var i = 0
     for i < s.len() && is_space(s[i]) {
@@ -440,6 +458,7 @@ fn trim_left_spaces(string s):string {
 }
 
 // trim_right_spaces trims trailing space characters (including newlines) from a string
+#local
 fn trim_right_spaces(string s):string {
     var i = s.len()
     for i > 0 && (is_space(s[i - 1]) || s[i - 1] == '\n'[0]) {
@@ -449,11 +468,13 @@ fn trim_right_spaces(string s):string {
 }
 
 // trim_spaces trims whitespace from both ends of a string
+#local
 fn trim_spaces(string s):string {
     return trim_right_spaces(trim_left_spaces(s))
 }
 
 // replace_all replaces all occurrences of old with new_ in s
+#local
 fn replace_all(string s, string old, string new_):string {
     if old.len() == 0 {
         return s
