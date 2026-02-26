@@ -95,7 +95,7 @@ var env_map = nature_env.unmarshal('KEY=value\nOTHER=123')
 
 All getters read directly from the process environment (works after `load()` or with any env var).
 
-#### `env.text(string key, ...[string] default_):string!`
+#### `env.text(string key, ...[string] fallback):string!`
 
 Returns the value as a string. Pass an optional default for when the key is not set.
 
@@ -104,7 +104,7 @@ var host = env.text('HOST')                    // throws if missing
 var host = env.text('HOST', 'localhost')       // returns 'localhost' if missing
 ```
 
-#### `env.number(string key, ...[int] default_):int!`
+#### `env.number(string key, ...[int] fallback):int!`
 
 Returns the value parsed as an integer.
 
@@ -113,7 +113,7 @@ var port = env.number('PORT')              // throws if missing or not a number
 var port = env.number('PORT', 3000)        // returns 3000 if missing
 ```
 
-#### `env.decimal(string key, ...[float] default_):float!`
+#### `env.decimal(string key, ...[float] fallback):float!`
 
 Returns the value parsed as a float.
 
@@ -122,7 +122,7 @@ var rate = env.decimal('RATE')             // throws if missing
 var rate = env.decimal('RATE', 0.5)        // returns 0.5 if missing
 ```
 
-#### `env.boolean(string key, ...[bool] default_):bool!`
+#### `env.boolean(string key, ...[bool] fallback):bool!`
 
 Returns the value parsed as a boolean. Accepts `true`/`false`, `1`/`0`, `yes`/`no` (case-insensitive).
 
@@ -131,7 +131,7 @@ var debug = env.boolean('DEBUG')           // throws if missing
 var debug = env.boolean('DEBUG', false)    // returns false if missing
 ```
 
-#### `env.array(string key, ...[string] default_):[string]!`
+#### `env.array(string key, ...[string] fallback):[string]!`
 
 Returns the value split by commas with whitespace trimmed. The variadic args serve as the default array.
 
