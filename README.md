@@ -11,7 +11,6 @@ A `.env` file parser and loader for the [Nature programming language](https://na
 - Variable expansion (`$VAR`, `${VAR}`)
 - Single & double quoted values
 - Comments, export prefix, and more
-- Autoload mode — no explicit `load()` needed
 - Read, write, marshal, and unmarshal `.env` content
 
 ## Installation
@@ -64,19 +63,6 @@ fn main():void! {
 }
 ```
 
-### Autoload
-
-Skip the explicit `load()` call by importing the autoload module:
-
-```n
-import env.autoload  // .env is loaded on import
-import env
-
-fn main():void {
-    var port = env.number('PORT', 8080)
-}
-```
-
 ---
 
 ## API Reference
@@ -92,32 +78,12 @@ env.load()                          // loads .env
 env.load('.env', '.env.local')      // loads multiple files
 ```
 
-#### `try_load(...[string] filenames):void!`
-
-Same as `load`, but returns an error instead of panicking.
-
-```n
-env.try_load('.env') catch err {
-    println(err.msg())
-}
-```
-
 #### `overload(...[string] filenames):void`
 
 Same as `load`, but **does** override existing environment variables. Panics on failure.
 
 ```n
 env.overload('.env.test')
-```
-
-#### `try_overload(...[string] filenames):void!`
-
-Same as `overload`, but returns an error instead of panicking.
-
-```n
-env.try_overload('.env.test') catch err {
-    println(err.msg())
-}
 ```
 
 #### `read(...[string] filenames):{string:string}!`
@@ -199,13 +165,14 @@ var tags = env.array('TAGS')
 var tags = env.array('TAGS', 'a', 'b', 'c')  // default if missing
 ```
 
-#### `dict(string key):{string:string}!`
+#### `dict(string key, ...[string] fallback):{string:string}!`
 
-Parses comma-separated `key=value` pairs into a map.
+Parses comma-separated `key=value` pairs into a map. The optional fallback is a comma-separated string parsed the same way.
 
 ```n
 // DB_OPTS=host=localhost,port=5432  →  {"host": "localhost", "port": "5432"}
 var opts = env.dict('DB_OPTS')
+var opts = env.dict('DB_OPTS', 'host=localhost,port=5432')  // default if missing
 ```
 
 ---

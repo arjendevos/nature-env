@@ -41,7 +41,7 @@ fn read(...[string] filenames):{string:string}! {
 // load reads env file(s) and loads them into the process environment.
 // It WILL NOT override env variables that already exist.
 // If no filenames given, defaults to ".env".
-// Panics on failure. Use try_load for error handling.
+// Panics on failure.
 fn load(...[string] filenames):bool {
     var fnames = filenames_or_default(filenames)
     for fname in fnames {
@@ -52,18 +52,10 @@ fn load(...[string] filenames):bool {
     return true
 }
 
-// try_load is like load but returns an error instead of panicking.
-fn try_load(...[string] filenames):void! {
-    var fnames = filenames_or_default(filenames)
-    for fname in fnames {
-        load_file(fname, false)
-    }
-}
-
 // overload reads env file(s) and loads them into the process environment.
 // It WILL override env variables that already exist.
 // If no filenames given, defaults to ".env".
-// Panics on failure. Use try_overload for error handling.
+// Panics on failure.
 fn overload(...[string] filenames):bool {
     var fnames = filenames_or_default(filenames)
     for fname in fnames {
@@ -72,14 +64,6 @@ fn overload(...[string] filenames):bool {
         }
     }
     return true
-}
-
-// try_overload is like overload but returns an error instead of panicking.
-fn try_overload(...[string] filenames):void! {
-    var fnames = filenames_or_default(filenames)
-    for fname in fnames {
-        load_file(fname, true)
-    }
 }
 
 // write serializes the given environment map and writes it to a file.
@@ -195,9 +179,17 @@ fn array(string key, ...[string] fallback):[string]! {
 
 // dict retrieves an env var as a {string:string} map, parsing comma-separated key=value pairs.
 // Example: "host=localhost,port=5432" → {"host": "localhost", "port": "5432"}
-// Throws if not set.
-fn dict(string key):{string:string}! {
-    var raw = get_raw(key)
-    return parse_dict(raw)
+// Throws if not set and no default is provided.
+//   env.dict('DB_OPTS')                                     → throws if missing
+//   env.dict('DB_OPTS', 'host=localhost,port=5432')          → returns parsed fallback if missing
+fn dict(string key, ...[string] fallback):{string:string}! {
+    var val = libc.getenv(key.to_cstr())
+    if val as anyptr == 0 as anyptr {
+        if fallback.len() > 0 {
+            return parse_dict(fallback[0])
+        }
+        throw errorf('environment variable "%s" is not set', key)
+    }
+    return parse_dict(val.to_string())
 }
 
