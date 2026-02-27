@@ -1,6 +1,8 @@
-# env
+# nature-env
 
-A `.env` file parser and loader for [Nature](https://nature-lang.org), inspired by [godotenv](https://github.com/joho/godotenv).
+A `.env` file parser and loader for the [Nature programming language](https://nature-lang.org).
+
+> **nature-env** brings dotenv support to Nature lang — load, parse, and manage environment variables with type-safe getters.
 
 ## Features
 
