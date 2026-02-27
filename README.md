@@ -1,6 +1,16 @@
-# nature-env
+# env
 
-A dotenv (`.env`) file parser and loader for [nature-lang](https://nature-lang.org), inspired by [godotenv](https://github.com/joho/godotenv).
+A `.env` file parser and loader for [Nature](https://nature-lang.org), inspired by [godotenv](https://github.com/joho/godotenv).
+
+## Features
+
+- Load `.env` files into the process environment
+- Type-safe getters: `string`, `int`, `float`, `bool`, `array`, `dict`
+- Variable expansion (`$VAR`, `${VAR}`)
+- Single & double quoted values
+- Comments, export prefix, and more
+- Autoload mode — no explicit `load()` needed
+- Read, write, marshal, and unmarshal `.env` content
 
 ## Installation
 
@@ -8,7 +18,7 @@ Add to your `package.toml`:
 
 ```toml
 [dependencies]
-nature_env = { type = "git", version = "v1.0.0", url = "https://github.com/arjendevos/nature-env" }
+env = { type = "git", version = "v1.0.0", url = "https://github.com/arjendevos/nature-env" }
 ```
 
 Then run:
@@ -17,11 +27,11 @@ Then run:
 npkg sync
 ```
 
-## Usage
+## Quick Start
 
 Create a `.env` file in your project root:
 
-```
+```bash
 DATABASE_URL=postgres://localhost/mydb
 SECRET_KEY=mysecret
 DEBUG=true
@@ -33,174 +43,182 @@ DB_OPTS=host=localhost,port=5432
 
 Load and access your variables:
 
-```nature
-import nature_env
-import nature_env.env as env
+```n
+import env
 
 fn main():void! {
-    // Load .env file into process environment (panics on failure)
-    nature_env.load()
+    // Load .env into the process environment (panics on failure)
+    env.load()
 
-    // Type-safe getters via env module
-    var db = env.text('DATABASE_URL')             // string, throws if missing
-    var port = env.number('PORT', 8080)           // int with default
-    var rate = env.decimal('RATE', 0.5)           // float with default
-    var debug = env.boolean('DEBUG')              // bool (true/false/1/0/yes/no)
-    var origins = env.array('ALLOWED_ORIGINS')    // ["http://localhost", "https://example.com"]
-    var opts = env.dict('DB_OPTS')                // {"host": "localhost", "port": "5432"}
+    // Type-safe getters
+    var db      = env.text('DATABASE_URL')          // string — throws if missing
+    var port    = env.number('PORT', 8080)           // int with default
+    var rate    = env.decimal('RATE', 0.5)           // float with default
+    var debug   = env.boolean('DEBUG')               // bool (true/false/1/0/yes/no)
+    var origins = env.array('ALLOWED_ORIGINS')       // ["http://localhost", "https://example.com"]
+    var opts    = env.dict('DB_OPTS')                // {"host": "localhost", "port": "5432"}
 
     println(db)
 }
 ```
 
-Or use autoload to skip the explicit `load()` call:
+### Autoload
 
-```nature
-import nature_env.autoload                        // .env is loaded automatically
-import nature_env.env as env
+Skip the explicit `load()` call by importing the autoload module:
+
+```n
+import env.autoload  // .env is loaded on import
+import env
 
 fn main():void {
     var port = env.number('PORT', 8080)
 }
 ```
 
-## API
+---
 
-### Loading & Reading (`import nature_env`)
+## API Reference
+
+### Loading & Reading
 
 #### `load(...[string] filenames):void`
 
-Reads env file(s) and sets them in the process environment. **Will not** override variables that already exist. Defaults to `.env` when called with no arguments. **Panics** on failure.
+Loads env file(s) into the process environment. **Does not** override variables that already exist. Defaults to `.env` when called with no arguments. Panics on failure.
 
-```nature
-nature_env.load()                              // loads .env
-nature_env.load('.env', '.env.local')          // loads multiple files
+```n
+env.load()                          // loads .env
+env.load('.env', '.env.local')      // loads multiple files
 ```
 
 #### `try_load(...[string] filenames):void!`
 
 Same as `load`, but returns an error instead of panicking.
 
-```nature
-nature_env.try_load('.env') catch err {
+```n
+env.try_load('.env') catch err {
     println(err.msg())
 }
 ```
 
 #### `overload(...[string] filenames):void`
 
-Same as `load`, but **will** override existing environment variables. **Panics** on failure.
+Same as `load`, but **does** override existing environment variables. Panics on failure.
 
-```nature
-nature_env.overload('.env.test')
+```n
+env.overload('.env.test')
 ```
 
 #### `try_overload(...[string] filenames):void!`
 
 Same as `overload`, but returns an error instead of panicking.
 
-```nature
-nature_env.try_overload('.env.test') catch err {
+```n
+env.try_overload('.env.test') catch err {
     println(err.msg())
 }
 ```
 
 #### `read(...[string] filenames):{string:string}!`
 
-Reads env file(s) and returns the key-value pairs as a map **without** setting them in the environment.
+Reads env file(s) and returns key-value pairs as a map **without** modifying the environment.
 
-```nature
-var env_map = nature_env.read('.env')
-println(env_map['DATABASE_URL'])
+```n
+var m = env.read('.env')
+println(m['DATABASE_URL'])
 ```
 
 #### `unmarshal(string src):{string:string}!`
 
-Parses a dotenv-formatted string and returns the key-value pairs as a map.
+Parses a dotenv-formatted string into a map.
 
-```nature
-var env_map = nature_env.unmarshal('KEY=value\nOTHER=123')
+```n
+var m = env.unmarshal('KEY=value\nOTHER=123')
 ```
 
-### Type-Safe Getters (`import nature_env.env as env`)
+---
 
-All getters read directly from the process environment (works after `load()` or with any env var).
+### Type-Safe Getters
 
-#### `env.text(string key, ...[string] fallback):string!`
+All getters read from the process environment. They work after calling `load()` or with any pre-existing env var.
 
-Returns the value as a string. Pass an optional default for when the key is not set.
+Each getter throws if the key is missing and no default is provided.
 
-```nature
-var host = env.text('HOST')                    // throws if missing
-var host = env.text('HOST', 'localhost')       // returns 'localhost' if missing
+#### `text(string key, ...[string] fallback):string!`
+
+Returns the value as a string.
+
+```n
+var host = env.text('HOST')                 // throws if missing
+var host = env.text('HOST', 'localhost')     // returns 'localhost' if missing
 ```
 
-#### `env.str(string key, ...[string] fallback):string!`
+#### `str(string key, ...[string] fallback):string!`
 
-Alias for `env.text`. Returns the value as a string.
+Alias for `text`.
 
-```nature
-var host = env.str('HOST')                     // throws if missing
-var host = env.str('HOST', 'localhost')        // returns 'localhost' if missing
+```n
+var host = env.str('HOST', 'localhost')
 ```
 
-#### `env.number(string key, ...[int] fallback):int!`
+#### `number(string key, ...[int] fallback):int!`
 
 Returns the value parsed as an integer.
 
-```nature
-var port = env.number('PORT')              // throws if missing or not a number
-var port = env.number('PORT', 3000)        // returns 3000 if missing
+```n
+var port = env.number('PORT')           // throws if missing or not a number
+var port = env.number('PORT', 3000)     // returns 3000 if missing
 ```
 
-#### `env.decimal(string key, ...[float] fallback):float!`
+#### `decimal(string key, ...[float] fallback):float!`
 
 Returns the value parsed as a float.
 
-```nature
-var rate = env.decimal('RATE')             // throws if missing
-var rate = env.decimal('RATE', 0.5)        // returns 0.5 if missing
+```n
+var rate = env.decimal('RATE')          // throws if missing
+var rate = env.decimal('RATE', 0.5)     // returns 0.5 if missing
 ```
 
-#### `env.boolean(string key, ...[bool] fallback):bool!`
+#### `boolean(string key, ...[bool] fallback):bool!`
 
 Returns the value parsed as a boolean. Accepts `true`/`false`, `1`/`0`, `yes`/`no` (case-insensitive).
 
-```nature
-var debug = env.boolean('DEBUG')           // throws if missing
-var debug = env.boolean('DEBUG', false)    // returns false if missing
+```n
+var debug = env.boolean('DEBUG')        // throws if missing
+var debug = env.boolean('DEBUG', false) // returns false if missing
 ```
 
-#### `env.array(string key, ...[string] fallback):[string]!`
+#### `array(string key, ...[string] fallback):[string]!`
 
-Returns the value split by commas with whitespace trimmed. The variadic args serve as the default array.
+Splits the value by commas (whitespace trimmed). The variadic args serve as the default array.
 
-```nature
+```n
 // TAGS=api, web, worker  →  ["api", "web", "worker"]
-var tags = env.array('TAGS')                      // throws if missing
-var tags = env.array('TAGS', 'a', 'b', 'c')      // returns ['a','b','c'] if missing
+var tags = env.array('TAGS')
+var tags = env.array('TAGS', 'a', 'b', 'c')  // default if missing
 ```
 
-#### `env.dict(string key):{string:string}!`
+#### `dict(string key):{string:string}!`
 
 Parses comma-separated `key=value` pairs into a map.
 
-```nature
+```n
 // DB_OPTS=host=localhost,port=5432  →  {"host": "localhost", "port": "5432"}
 var opts = env.dict('DB_OPTS')
 ```
 
-### Writing (`import nature_env`)
+---
+
+### Writing & Serialization
 
 #### `marshal({string:string} env_map):string`
 
-Converts a map into a dotenv-formatted string. Keys are sorted alphabetically. Integer values are unquoted, all others are double-quoted with escaping.
+Converts a map into a dotenv-formatted string. Keys are sorted alphabetically. Integer values are unquoted; all others are double-quoted with escaping.
 
-```nature
+```n
 {string:string} m = {}
 m['PORT'] = '3000'
 m['HOST'] = 'localhost'
-var output = nature_env.marshal(m)
+var output = env.marshal(m)
 // HOST="localhost"\nPORT=3000
 ```
 
@@ -208,14 +226,16 @@ var output = nature_env.marshal(m)
 
 Marshals the map and writes it to a file.
 
-```nature
-nature_env.write(m, '.env.output')
+```n
+env.write(m, '.env.output')
 ```
 
-## Supported .env Syntax
+---
+
+## Supported `.env` Syntax
 
 ```bash
-# Comments (full line or inline with space before #)
+# Comments (full-line or inline with a space before #)
 KEY=value
 KEY=value # inline comment
 
@@ -229,7 +249,7 @@ PATH=${BASE}/bin
 ALT=$BASE/bin
 PAREN=$(BASE)/lib
 
-# Export prefix (stripped)
+# Export prefix (stripped automatically)
 export SECRET=abc123
 
 # Empty values
