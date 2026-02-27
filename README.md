@@ -19,7 +19,7 @@ Add to your `package.toml`:
 
 ```toml
 [dependencies]
-env = { type = "git", version = "v1.0.0", url = "https://github.com/arjendevos/nature-env" }
+env = { type = "git", version = "v1.0.5", url = "https://github.com/arjendevos/nature-env" }
 ```
 
 Then run:
