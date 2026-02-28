@@ -11,7 +11,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
+
+      - name: Install Nature
+        run: |
+          set -euo pipefail
+          release_json="$(curl -fsSL https://api.github.com/repos/nature-lang/nature/releases/latest)"
+          asset_url="$(printf '%s' "$release_json" | grep -Eo 'https://[^"[:space:]]*nature-v[^"[:space:]]*-linux-amd64\.tar\.gz' | head -n 1)"
+
+          if [ -z "$asset_url" ]; then
+            echo "Could not find a linux-amd64 Nature release asset"
+            exit 1
+          fi
+
+          curl -fsSL "$asset_url" -o nature.tar.gz
+          tar -xzf nature.tar.gz
+          sudo mv nature /usr/local/nature
+          echo "/usr/local/nature/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Nature
+        run: nature --version
 
       - name: Ensure test script is executable
         run: chmod +x tests/run_tests.sh
