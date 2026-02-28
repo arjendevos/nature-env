@@ -1,4 +1,4 @@
-name = "env"
+name = "dotenv"
 version = "1.0.0"
 authors = ["Arjen de Vos"]
 description = "A dotenv file parser and loader for nature-lang, inspired by godotenv"

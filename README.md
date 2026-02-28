@@ -19,7 +19,7 @@ Add to your `package.toml`:
 
 ```toml
 [dependencies]
-env = { type = "git", version = "v1.0.5", url = "https://github.com/arjendevos/nature-env" }
+dotenv = { type = "git", version = "v1.0.5", url = "https://github.com/arjendevos/nature-env" }
 ```
 
 Then run:
@@ -45,19 +45,19 @@ DB_OPTS=host=localhost,port=5432
 Load and access your variables:
 
 ```n
-import env
+import dotenv
 
 fn main():void! {
     // Load .env into the process environment (panics on failure)
-    env.load()
+    dotenv.load()
 
     // Type-safe getters
-    var db      = env.text('DATABASE_URL')          // string — throws if missing
-    var port    = env.number('PORT', 8080)           // int with default
-    var rate    = env.decimal('RATE', 0.5)           // float with default
-    var debug   = env.boolean('DEBUG')               // bool (true/false/1/0/yes/no)
-    var origins = env.array('ALLOWED_ORIGINS')       // ["http://localhost", "https://example.com"]
-    var opts    = env.dict('DB_OPTS')                // {"host": "localhost", "port": "5432"}
+    var db      = dotenv.text('DATABASE_URL')          // string — throws if missing
+    var port    = dotenv.number('PORT', 8080)           // int with default
+    var rate    = dotenv.decimal('RATE', 0.5)           // float with default
+    var debug   = dotenv.boolean('DEBUG')               // bool (true/false/1/0/yes/no)
+    var origins = dotenv.array('ALLOWED_ORIGINS')       // ["http://localhost", "https://example.com"]
+    var opts    = dotenv.dict('DB_OPTS')                // {"host": "localhost", "port": "5432"}
 
     println(db)
 }
@@ -74,8 +74,8 @@ fn main():void! {
 Loads env file(s) into the process environment. **Does not** override variables that already exist. Defaults to `.env` when called with no arguments. Panics on failure.
 
 ```n
-env.load()                          // loads .env
-env.load('.env', '.env.local')      // loads multiple files
+dotenv.load()                          // loads .env
+dotenv.load('.env', '.env.local')      // loads multiple files
 ```
 
 #### `overload(...[string] filenames):void`
@@ -83,7 +83,7 @@ env.load('.env', '.env.local')      // loads multiple files
 Same as `load`, but **does** override existing environment variables. Panics on failure.
 
 ```n
-env.overload('.env.test')
+dotenv.overload('.env.test')
 ```
 
 #### `read(...[string] filenames):{string:string}!`
@@ -91,7 +91,7 @@ env.overload('.env.test')
 Reads env file(s) and returns key-value pairs as a map **without** modifying the environment.
 
 ```n
-var m = env.read('.env')
+var m = dotenv.read('.env')
 println(m['DATABASE_URL'])
 ```
 
@@ -100,7 +100,7 @@ println(m['DATABASE_URL'])
 Parses a dotenv-formatted string into a map.
 
 ```n
-var m = env.unmarshal('KEY=value\nOTHER=123')
+var m = dotenv.unmarshal('KEY=value\nOTHER=123')
 ```
 
 ---
@@ -116,8 +116,8 @@ Each getter throws if the key is missing and no default is provided.
 Returns the value as a string.
 
 ```n
-var host = env.text('HOST')                 // throws if missing
-var host = env.text('HOST', 'localhost')     // returns 'localhost' if missing
+var host = dotenv.text('HOST')                 // throws if missing
+var host = dotenv.text('HOST', 'localhost')     // returns 'localhost' if missing
 ```
 
 #### `str(string key, ...[string] fallback):string!`
@@ -125,7 +125,7 @@ var host = env.text('HOST', 'localhost')     // returns 'localhost' if missing
 Alias for `text`.
 
 ```n
-var host = env.str('HOST', 'localhost')
+var host = dotenv.str('HOST', 'localhost')
 ```
 
 #### `number(string key, ...[int] fallback):int!`
@@ -133,8 +133,8 @@ var host = env.str('HOST', 'localhost')
 Returns the value parsed as an integer.
 
 ```n
-var port = env.number('PORT')           // throws if missing or not a number
-var port = env.number('PORT', 3000)     // returns 3000 if missing
+var port = dotenv.number('PORT')           // throws if missing or not a number
+var port = dotenv.number('PORT', 3000)     // returns 3000 if missing
 ```
 
 #### `decimal(string key, ...[float] fallback):float!`
@@ -142,8 +142,8 @@ var port = env.number('PORT', 3000)     // returns 3000 if missing
 Returns the value parsed as a float.
 
 ```n
-var rate = env.decimal('RATE')          // throws if missing
-var rate = env.decimal('RATE', 0.5)     // returns 0.5 if missing
+var rate = dotenv.decimal('RATE')          // throws if missing
+var rate = dotenv.decimal('RATE', 0.5)     // returns 0.5 if missing
 ```
 
 #### `boolean(string key, ...[bool] fallback):bool!`
@@ -151,8 +151,8 @@ var rate = env.decimal('RATE', 0.5)     // returns 0.5 if missing
 Returns the value parsed as a boolean. Accepts `true`/`false`, `1`/`0`, `yes`/`no` (case-insensitive).
 
 ```n
-var debug = env.boolean('DEBUG')        // throws if missing
-var debug = env.boolean('DEBUG', false) // returns false if missing
+var debug = dotenv.boolean('DEBUG')        // throws if missing
+var debug = dotenv.boolean('DEBUG', false) // returns false if missing
 ```
 
 #### `array(string key, ...[string] fallback):[string]!`
@@ -161,8 +161,8 @@ Splits the value by commas (whitespace trimmed). The variadic args serve as the 
 
 ```n
 // TAGS=api, web, worker  →  ["api", "web", "worker"]
-var tags = env.array('TAGS')
-var tags = env.array('TAGS', 'a', 'b', 'c')  // default if missing
+var tags = dotenv.array('TAGS')
+var tags = dotenv.array('TAGS', 'a', 'b', 'c')  // default if missing
 ```
 
 #### `dict(string key, ...[string] fallback):{string:string}!`
@@ -171,8 +171,8 @@ Parses comma-separated `key=value` pairs into a map. The optional fallback is a 
 
 ```n
 // DB_OPTS=host=localhost,port=5432  →  {"host": "localhost", "port": "5432"}
-var opts = env.dict('DB_OPTS')
-var opts = env.dict('DB_OPTS', 'host=localhost,port=5432')  // default if missing
+var opts = dotenv.dict('DB_OPTS')
+var opts = dotenv.dict('DB_OPTS', 'host=localhost,port=5432')  // default if missing
 ```
 
 ---
@@ -187,7 +187,7 @@ Converts a map into a dotenv-formatted string. Keys are sorted alphabetically. I
 {string:string} m = {}
 m['PORT'] = '3000'
 m['HOST'] = 'localhost'
-var output = env.marshal(m)
+var output = dotenv.marshal(m)
 // HOST="localhost"\nPORT=3000
 ```
 
@@ -196,7 +196,7 @@ var output = env.marshal(m)
 Marshals the map and writes it to a file.
 
 ```n
-env.write(m, '.env.output')
+dotenv.write(m, '.env.output')
 ```
 
 ---
